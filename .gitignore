@@ -53,3 +53,6 @@ test-output
 
 # Ignore Prisma generated files
 libs/infrastructure/database/src/generated/
+
+# Internal command helper in this project for developer
+command.txt
