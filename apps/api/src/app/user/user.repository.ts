@@ -1,6 +1,6 @@
 import { DatabaseService } from '@e-commerce-platform/database';
+import type { CreateUserDto } from '@e-commerce-platform/types';
 import { Injectable } from '@nestjs/common';
-import type { CreateUserInput } from './user.service';
 
 @Injectable()
 export class UserRepository {
@@ -15,13 +15,13 @@ export class UserRepository {
     return user;
   }
 
-  async createUser(createUserInput: CreateUserInput) {
+  async createUser(createUserDto: CreateUserDto) {
     return this.databaseService.user.create({
       data: {
-        email: createUserInput.email,
-        passwordHash: createUserInput.passwordHash,
-        fullName: createUserInput.fullName,
-        phone: createUserInput.phone,
+        email: createUserDto.email,
+        passwordHash: createUserDto.passwordHash,
+        fullName: createUserDto.fullName,
+        phone: createUserDto.phone,
       },
       select: {
         id: true,

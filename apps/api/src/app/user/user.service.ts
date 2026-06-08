@@ -1,29 +1,15 @@
+import type { CreateUserDto } from '@e-commerce-platform/types';
+import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
 import { ConflictException, Injectable } from '@nestjs/common';
 import { UserRepository } from './user.repository';
-
-export type CreateUserInput = {
-  email: string;
-  passwordHash: string;
-  fullName: string;
-  phone?: string;
-};
-
-function isUniqueConstraintError(error: unknown) {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === 'P2002'
-  );
-}
 
 @Injectable()
 export class UserService {
   constructor(private readonly userRepository: UserRepository) {}
 
-  async createUser(createUserInput: CreateUserInput) {
+  async createUser(createUserDto: CreateUserDto) {
     const existingUser = await this.userRepository.findUserByEmail(
-      createUserInput.email
+      createUserDto.email
     );
 
     if (existingUser) {
@@ -31,9 +17,9 @@ export class UserService {
     }
 
     try {
-      return await this.userRepository.createUser(createUserInput);
+      return await this.userRepository.createUser(createUserDto);
     } catch (error) {
-      if (isUniqueConstraintError(error)) {
+      if (prismaError(error, PrismaErrorCode.UniqueConstraint)) {
         throw new ConflictException('Email already exists');
       }
 
