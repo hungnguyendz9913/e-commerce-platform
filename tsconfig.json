@@ -4,12 +4,6 @@
   "files": [],
   "references": [
     {
-      "path": "./apps/web npx-e2e"
-    },
-    {
-      "path": "./apps/web npx"
-    },
-    {
       "path": "./apps/web-e2e"
     },
     {

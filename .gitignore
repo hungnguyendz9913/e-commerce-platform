@@ -50,3 +50,6 @@ test-output
 
 # Environment Variables
 .env
+
+# Ignore Prisma generated files
+libs/infrastructure/database/src/generated/
