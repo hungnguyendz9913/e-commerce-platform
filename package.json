@@ -46,6 +46,7 @@
     "jest-environment-jsdom": "~30.3.0",
     "jest-environment-node": "~30.3.0",
     "jest-util": "~30.3.0",
+    "jsonc-eslint-parser": "^2.1.0",
     "nx": "22.7.5",
     "postcss": "8.4.38",
     "prettier": "~3.6.2",
@@ -59,7 +60,8 @@
   },
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/*",
+    "libs/infrastructure/*"
   ],
   "dependencies": {
     "@nestjs/common": "^11.0.0",
