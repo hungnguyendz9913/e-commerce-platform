@@ -3,6 +3,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '@e-commerce-platform/database';
+import { ProductsRepository } from './products.repository';
 import { ProductsService } from './products.service';
 
 const createdAt = new Date('2026-06-09T01:00:00.000Z');
@@ -97,10 +98,14 @@ function createDatabaseMock() {
   };
 }
 
+function createService(databaseService: DatabaseService) {
+  return new ProductsService(new ProductsRepository(databaseService));
+}
+
 describe('ProductsService', () => {
   it('should list admin products with filters and management summary fields', async () => {
     const { databaseService, rawDatabaseService } = createDatabaseMock();
-    const service = new ProductsService(databaseService);
+    const service = createService(databaseService);
 
     await expect(
       service.listAdminProducts({
@@ -152,7 +157,7 @@ describe('ProductsService', () => {
 
   it('should create a product with category, images, inventory, and initial movement', async () => {
     const { databaseService, transaction } = createDatabaseMock();
-    const service = new ProductsService(databaseService);
+    const service = createService(databaseService);
 
     await expect(
       service.createProduct({
@@ -230,7 +235,7 @@ describe('ProductsService', () => {
       sku: 'SKU-1',
       slug: 'other-product',
     });
-    const service = new ProductsService(databaseService);
+    const service = createService(databaseService);
 
     await expect(
       service.createProduct({
@@ -260,7 +265,7 @@ describe('ProductsService', () => {
         },
       }),
     );
-    const service = new ProductsService(databaseService);
+    const service = createService(databaseService);
 
     await expect(
       service.updateProduct('product-id', {
@@ -322,7 +327,7 @@ describe('ProductsService', () => {
         inventoryMovements: 0,
       },
     });
-    const service = new ProductsService(databaseService);
+    const service = createService(databaseService);
 
     await expect(service.deleteProduct('product-id')).resolves.toEqual({
       data: {
@@ -346,7 +351,7 @@ describe('ProductsService', () => {
         inventoryMovements: 0,
       },
     });
-    const service = new ProductsService(databaseService);
+    const service = createService(databaseService);
 
     await expect(service.deleteProduct('product-id')).resolves.toMatchObject({
       data: {
@@ -368,7 +373,7 @@ describe('ProductsService', () => {
 
   it('should query public listings with active approved visibility only', async () => {
     const { databaseService, rawDatabaseService } = createDatabaseMock();
-    const service = new ProductsService(databaseService);
+    const service = createService(databaseService);
 
     await service.listPublicProducts({});
 
@@ -385,7 +390,7 @@ describe('ProductsService', () => {
   it('should hide inactive, archived, pending, and rejected product details', async () => {
     const { databaseService, rawDatabaseService } = createDatabaseMock();
     rawDatabaseService.product.findFirst.mockResolvedValue(null);
-    const service = new ProductsService(databaseService);
+    const service = createService(databaseService);
 
     await expect(service.getPublicProduct('product-id')).rejects.toThrow(
       NotFoundException,

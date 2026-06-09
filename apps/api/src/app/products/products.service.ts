@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DatabaseService, Prisma } from '@e-commerce-platform/database';
+import { Prisma } from '@e-commerce-platform/database';
 import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
 import {
   CreateProductDto,
@@ -16,33 +16,15 @@ import {
   ProductStatus,
   UpdateProductDto,
 } from '@e-commerce-platform/api-contracts';
-
-const productInclude = {
-  category: {
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      status: true,
-    },
-  },
-  images: {
-    orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }],
-  },
-  inventoryItem: true,
-} satisfies Prisma.ProductInclude;
-
-type ProductWithRelations = Prisma.ProductGetPayload<{
-  include: typeof productInclude;
-}>;
-
-type ProductTransaction = Parameters<
-  Parameters<DatabaseService['$transaction']>[0]
->[0];
+import {
+  ProductTransaction,
+  ProductWithRelations,
+  ProductsRepository,
+} from './products.repository';
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly productsRepository: ProductsRepository) {}
 
   async listAdminProducts(query: ListProductsQueryDto) {
     const page = query.page ?? 1;
@@ -50,16 +32,12 @@ export class ProductsService {
     const where = this.buildProductWhere(query, false);
     const orderBy = this.buildProductOrderBy(query);
 
-    const [products, total] = await this.databaseService.$transaction([
-      this.databaseService.product.findMany({
-        where,
-        include: productInclude,
-        orderBy,
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.databaseService.product.count({ where }),
-    ]);
+    const [products, total] = await this.productsRepository.listProducts(
+      where,
+      orderBy,
+      page,
+      limit,
+    );
 
     return {
       data: products.map((product) => this.toAdminSummary(product)),
@@ -78,16 +56,12 @@ export class ProductsService {
     const where = this.buildProductWhere(query, true);
     const orderBy = this.buildProductOrderBy(query);
 
-    const [products, total] = await this.databaseService.$transaction([
-      this.databaseService.product.findMany({
-        where,
-        include: productInclude,
-        orderBy,
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.databaseService.product.count({ where }),
-    ]);
+    const [products, total] = await this.productsRepository.listProducts(
+      where,
+      orderBy,
+      page,
+      limit,
+    );
 
     return {
       data: products.map((product) => this.toPublicSummary(product)),
@@ -101,10 +75,7 @@ export class ProductsService {
   }
 
   async getAdminProduct(id: string) {
-    const product = await this.databaseService.product.findUnique({
-      where: { id },
-      include: productInclude,
-    });
+    const product = await this.productsRepository.findAdminProductById(id);
 
     if (!product) {
       throw new NotFoundException('Product not found');
@@ -116,14 +87,7 @@ export class ProductsService {
   }
 
   async getPublicProduct(id: string) {
-    const product = await this.databaseService.product.findFirst({
-      where: {
-        id,
-        status: ProductStatus.ACTIVE,
-        approvalStatus: ProductApprovalStatus.APPROVED,
-      },
-      include: productInclude,
-    });
+    const product = await this.productsRepository.findPublicProductById(id);
 
     if (!product) {
       throw new NotFoundException('Product not found');
@@ -136,7 +100,7 @@ export class ProductsService {
 
   async createProduct(createProductDto: CreateProductDto) {
     try {
-      const product = await this.databaseService.$transaction(
+      const product = await this.productsRepository.runInTransaction(
         async (transaction) => {
           await this.assertActiveCategory(
             transaction,
@@ -154,8 +118,9 @@ export class ProductsService {
             createProductDto.inventory?.reservedQuantity ?? 0;
           this.assertInventoryValues({ stockQuantity, reservedQuantity });
 
-          const createdProduct = await transaction.product.create({
-            data: {
+          const createdProduct = await this.productsRepository.createProduct(
+            transaction,
+            {
               sku: createProductDto.sku,
               name: createProductDto.name,
               slug: createProductDto.slug,
@@ -172,12 +137,12 @@ export class ProductsService {
                 },
               },
             },
-            include: productInclude,
-          });
+          );
 
           if (stockQuantity > 0) {
-            await transaction.inventoryMovement.create({
-              data: {
+            await this.productsRepository.createInventoryMovement(
+              transaction,
+              {
                 productId: createdProduct.id,
                 movementType: 'IMPORT',
                 quantity: stockQuantity,
@@ -185,7 +150,7 @@ export class ProductsService {
                 afterQuantity: stockQuantity,
                 reason: 'Initial product stock',
               },
-            });
+            );
           }
 
           return createdProduct;
@@ -203,12 +168,13 @@ export class ProductsService {
 
   async updateProduct(id: string, updateProductDto: UpdateProductDto) {
     try {
-      const product = await this.databaseService.$transaction(
+      const product = await this.productsRepository.runInTransaction(
         async (transaction) => {
-          const existingProduct = await transaction.product.findUnique({
-            where: { id },
-            include: productInclude,
-          });
+          const existingProduct =
+            await this.productsRepository.findProductForUpdate(
+              transaction,
+              id,
+            );
 
           if (!existingProduct) {
             throw new NotFoundException('Product not found');
@@ -235,9 +201,10 @@ export class ProductsService {
             updateProductDto.inventory,
           );
 
-          const updatedProduct = await transaction.product.update({
-            where: { id },
-            data: {
+          const updatedProduct = await this.productsRepository.updateProduct(
+            transaction,
+            id,
+            {
               sku: updateProductDto.sku,
               name: updateProductDto.name,
               slug: updateProductDto.slug,
@@ -263,16 +230,16 @@ export class ProductsService {
                       },
                     },
             },
-            include: productInclude,
-          });
+          );
 
           if (
             updateProductDto.inventory?.stockQuantity !== undefined &&
             inventoryData.previousStockQuantity !==
               inventoryData.next.stockQuantity
           ) {
-            await transaction.inventoryMovement.create({
-              data: {
+            await this.productsRepository.createInventoryMovement(
+              transaction,
+              {
                 productId: id,
                 movementType: 'ADJUSTMENT',
                 quantity:
@@ -282,7 +249,7 @@ export class ProductsService {
                 afterQuantity: inventoryData.next.stockQuantity,
                 reason: 'Admin product inventory update',
               },
-            });
+            );
           }
 
           return updatedProduct;
@@ -299,19 +266,7 @@ export class ProductsService {
   }
 
   async deleteProduct(id: string) {
-    const product = await this.databaseService.product.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        _count: {
-          select: {
-            cartItems: true,
-            orderItems: true,
-            inventoryMovements: true,
-          },
-        },
-      },
-    });
+    const product = await this.productsRepository.findProductDeleteInfo(id);
 
     if (!product) {
       throw new NotFoundException('Product not found');
@@ -323,11 +278,7 @@ export class ProductsService {
       product._count.inventoryMovements > 0;
 
     if (hasProtectedReferences) {
-      const archivedProduct = await this.databaseService.product.update({
-        where: { id },
-        data: { status: ProductStatus.ARCHIVED },
-        include: productInclude,
-      });
+      const archivedProduct = await this.productsRepository.archiveProduct(id);
 
       return {
         data: {
@@ -338,7 +289,7 @@ export class ProductsService {
       };
     }
 
-    await this.databaseService.product.delete({ where: { id } });
+    await this.productsRepository.deleteProduct(id);
 
     return {
       data: {
@@ -406,13 +357,10 @@ export class ProductsService {
     transaction: ProductTransaction,
     categoryId: string,
   ) {
-    const category = await transaction.category.findFirst({
-      where: {
-        id: categoryId,
-        status: 'ACTIVE',
-      },
-      select: { id: true },
-    });
+    const category = await this.productsRepository.findActiveCategory(
+      transaction,
+      categoryId,
+    );
 
     if (!category) {
       throw new NotFoundException('Active category not found');
@@ -439,13 +387,11 @@ export class ProductsService {
       return;
     }
 
-    const existingProduct = await transaction.product.findFirst({
-      where: {
-        OR: conditions,
-        NOT: excludedProductId ? { id: excludedProductId } : undefined,
-      },
-      select: { id: true, sku: true, slug: true },
-    });
+    const existingProduct = await this.productsRepository.findProductBySkuOrSlug(
+      transaction,
+      conditions,
+      excludedProductId,
+    );
 
     if (!existingProduct) {
       return;

@@ -1,0 +1,166 @@
+import { DatabaseService, Prisma } from '@e-commerce-platform/database';
+import {
+  ProductApprovalStatus,
+  ProductStatus,
+} from '@e-commerce-platform/api-contracts';
+import { Injectable } from '@nestjs/common';
+
+export const productInclude = {
+  category: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      status: true,
+    },
+  },
+  images: {
+    orderBy: [{ sortOrder: 'asc' as const }, { createdAt: 'asc' as const }],
+  },
+  inventoryItem: true,
+} satisfies Prisma.ProductInclude;
+
+export type ProductWithRelations = Prisma.ProductGetPayload<{
+  include: typeof productInclude;
+}>;
+
+export type ProductTransaction = Prisma.TransactionClient;
+
+type ProductClient = DatabaseService | ProductTransaction;
+
+@Injectable()
+export class ProductsRepository {
+  constructor(private readonly databaseService: DatabaseService) {}
+
+  runInTransaction<T>(
+    callback: (transaction: ProductTransaction) => Promise<T>,
+  ) {
+    return this.databaseService.$transaction(callback);
+  }
+
+  async listProducts(
+    where: Prisma.ProductWhereInput,
+    orderBy: Prisma.ProductOrderByWithRelationInput,
+    page: number,
+    limit: number,
+  ) {
+    return this.databaseService.$transaction([
+      this.databaseService.product.findMany({
+        where,
+        include: productInclude,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.databaseService.product.count({ where }),
+    ]);
+  }
+
+  findAdminProductById(id: string) {
+    return this.databaseService.product.findUnique({
+      where: { id },
+      include: productInclude,
+    });
+  }
+
+  findPublicProductById(id: string) {
+    return this.databaseService.product.findFirst({
+      where: {
+        id,
+        status: ProductStatus.ACTIVE,
+        approvalStatus: ProductApprovalStatus.APPROVED,
+      },
+      include: productInclude,
+    });
+  }
+
+  findActiveCategory(client: ProductClient, categoryId: string) {
+    return client.category.findFirst({
+      where: {
+        id: categoryId,
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+  }
+
+  findProductBySkuOrSlug(
+    client: ProductClient,
+    conditions: Prisma.ProductWhereInput[],
+    excludedProductId?: string,
+  ) {
+    return client.product.findFirst({
+      where: {
+        OR: conditions,
+        NOT: excludedProductId ? { id: excludedProductId } : undefined,
+      },
+      select: { id: true, sku: true, slug: true },
+    });
+  }
+
+  createProduct(
+    client: ProductClient,
+    data: Prisma.ProductCreateArgs['data'],
+  ) {
+    return client.product.create({
+      data,
+      include: productInclude,
+    });
+  }
+
+  findProductForUpdate(client: ProductClient, id: string) {
+    return client.product.findUnique({
+      where: { id },
+      include: productInclude,
+    });
+  }
+
+  updateProduct(
+    client: ProductClient,
+    id: string,
+    data: Prisma.ProductUpdateArgs['data'],
+  ) {
+    return client.product.update({
+      where: { id },
+      data,
+      include: productInclude,
+    });
+  }
+
+  createInventoryMovement(
+    client: ProductClient,
+    data: Prisma.InventoryMovementCreateArgs['data'],
+  ) {
+    return client.inventoryMovement.create({
+      data,
+    });
+  }
+
+  findProductDeleteInfo(id: string) {
+    return this.databaseService.product.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        _count: {
+          select: {
+            cartItems: true,
+            orderItems: true,
+            inventoryMovements: true,
+          },
+        },
+      },
+    });
+  }
+
+  archiveProduct(id: string) {
+    return this.databaseService.product.update({
+      where: { id },
+      data: { status: ProductStatus.ARCHIVED },
+      include: productInclude,
+    });
+  }
+
+  deleteProduct(id: string) {
+    return this.databaseService.product.delete({ where: { id } });
+  }
+}
