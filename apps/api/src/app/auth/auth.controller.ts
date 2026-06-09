@@ -1,10 +1,13 @@
-import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './services/auth.service';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { LoginDto } from './dtos/login.dto';
 import { RefreshTokenDto } from './dtos/refresh-token.dto';
 import { RegisterDto } from './dtos/register.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthenticatedUser } from './authenticated-user';
 
 @Controller('auth')
 export class AuthController {
@@ -26,13 +29,15 @@ export class AuthController {
   }
 
   @Post('logout')
-  logout(@Headers('authorization') authorizationHeader?: string) {
-    return this.authService.logout(authorizationHeader);
+  @UseGuards(JwtAuthGuard)
+  logout(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.logoutAuthenticated(user);
   }
 
   @Get('me')
-  me(@Headers('authorization') authorizationHeader?: string) {
-    return this.authService.me(authorizationHeader);
+  @UseGuards(JwtAuthGuard)
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.meAuthenticated(user);
   }
 
   @Post('forgot-password')

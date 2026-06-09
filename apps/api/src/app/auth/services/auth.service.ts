@@ -14,6 +14,7 @@ import { UserService } from '../../user/user.service';
 import { UserRoleService } from '../../user-role/user-role.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
+import { AuthenticatedUser } from '../authenticated-user';
 import {
   REFRESH_TOKEN_TTL_DAYS,
   PASSWORD_RESET_MESSAGE,
@@ -108,6 +109,10 @@ export class AuthService {
   async logout(authorizationHeader?: string) {
     const authenticatedUser = await this.authenticate(authorizationHeader);
 
+    return this.logoutAuthenticated(authenticatedUser);
+  }
+
+  async logoutAuthenticated(authenticatedUser: AuthenticatedUser) {
     await this.sessionRepository.revokeSession(
       authenticatedUser.sessionId,
       authenticatedUser.userId,
@@ -163,6 +168,11 @@ export class AuthService {
 
   async me(authorizationHeader?: string) {
     const authenticatedUser = await this.authenticate(authorizationHeader);
+
+    return this.meAuthenticated(authenticatedUser);
+  }
+
+  async meAuthenticated(authenticatedUser: AuthenticatedUser) {
     const user = await this.userService.findCurrentUserById(
       authenticatedUser.userId,
     );

@@ -9,7 +9,9 @@ describe('AuthController', () => {
     login: jest.fn(),
     refresh: jest.fn(),
     logout: jest.fn(),
+    logoutAuthenticated: jest.fn(),
     me: jest.fn(),
+    meAuthenticated: jest.fn(),
     forgotPassword: jest.fn(),
     resetPassword: jest.fn(),
   };
@@ -77,9 +79,15 @@ describe('AuthController', () => {
         success: true,
       },
     };
-    authService.logout.mockReturnValue(response);
+    authService.logoutAuthenticated.mockReturnValue(response);
 
-    expect(controller.logout('Bearer access-token')).toBe(response);
+    expect(
+      controller.logout({
+        userId: 'user-id',
+        sessionId: 'session-id',
+        roles: ['customer'],
+      }),
+    ).toBe(response);
   });
 
   it('should call auth service to get current user', () => {
@@ -93,9 +101,15 @@ describe('AuthController', () => {
         status: 'active',
       },
     };
-    authService.me.mockReturnValue(response);
+    authService.meAuthenticated.mockReturnValue(response);
 
-    expect(controller.me('Bearer access-token')).toBe(response);
+    expect(
+      controller.me({
+        userId: 'user-id',
+        sessionId: 'session-id',
+        roles: ['customer'],
+      }),
+    ).toBe(response);
   });
 
   it('should call auth service to start forgot-password flow', () => {
