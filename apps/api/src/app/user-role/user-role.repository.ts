@@ -19,8 +19,15 @@ export class UserRoleRepository {
   }
 
   async assignRoleToUser(userId: string, roleId: string) {
-    return this.databaseService.userRole.create({
-      data: {
+    return this.databaseService.userRole.upsert({
+      where: {
+        userId_roleId: {
+          userId,
+          roleId,
+        },
+      },
+      update: {},
+      create: {
         userId,
         roleId,
       },

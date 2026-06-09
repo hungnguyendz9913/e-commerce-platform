@@ -14,7 +14,7 @@ import { UserService } from '../../user/user.service';
 import { UserRoleService } from '../../user-role/user-role.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
-import { AuthenticatedUser } from '../authenticated-user';
+import type { AuthenticatedUser } from '../authenticated-user';
 import {
   REFRESH_TOKEN_TTL_DAYS,
   PASSWORD_RESET_MESSAGE,
