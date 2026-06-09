@@ -1,8 +1,8 @@
 import { ForbiddenException } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { RolesGuard } from '@e-commerce-platform/api-common';
 import { Roles } from '@e-commerce-platform/types';
-import { RolesGuard } from './roles.guard';
 
 describe('RolesGuard', () => {
   const reflector = {

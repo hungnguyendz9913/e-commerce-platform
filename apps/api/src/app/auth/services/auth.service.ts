@@ -1,19 +1,20 @@
-import { Roles } from '@e-commerce-platform/types';
+import type { AuthenticatedUser } from '@e-commerce-platform/api-common';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  RefreshTokenDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from '@e-commerce-platform/api-contracts';
 import {
   BadRequestException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
-import { LoginDto } from '../dtos/login.dto';
-import { RefreshTokenDto } from '../dtos/refresh-token.dto';
-import { RegisterDto } from '../dtos/register.dto';
-import { ResetPasswordDto } from '../dtos/reset-password.dto';
 import { SessionRepository } from '../session.repository';
 import { UserService } from '../../user/user.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
-import type { AuthenticatedUser } from '../authenticated-user';
 import {
   REFRESH_TOKEN_TTL_DAYS,
   PASSWORD_RESET_MESSAGE,

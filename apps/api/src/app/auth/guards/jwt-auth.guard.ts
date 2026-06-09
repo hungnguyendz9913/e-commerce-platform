@@ -4,8 +4,8 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import type { RequestWithUser } from '@e-commerce-platform/api-common';
 import { AuthService } from '../services/auth.service';
-import type { RequestWithUser } from '../authenticated-user';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {

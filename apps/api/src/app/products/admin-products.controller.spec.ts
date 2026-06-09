@@ -1,9 +1,8 @@
 import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
+import { ROLES_KEY, RolesGuard } from '@e-commerce-platform/api-common';
 import { Roles as RoleValues } from '@e-commerce-platform/types';
-import { ROLES_KEY } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { AdminProductsController } from './admin-products.controller';
 import { ProductsService } from './products.service';
 

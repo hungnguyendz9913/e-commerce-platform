@@ -6,16 +6,16 @@ import {
 } from '@nestjs/common';
 import { DatabaseService, Prisma } from '@e-commerce-platform/database';
 import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
-import { CreateProductDto } from './dtos/create-product.dto';
-import { ListProductsQueryDto } from './dtos/list-products-query.dto';
 import {
+  CreateProductDto,
+  ListProductsQueryDto,
   ProductApprovalStatus,
+  ProductImageDto,
+  ProductInventoryDto,
   ProductSortField,
   ProductStatus,
-} from './dtos/product.enums';
-import { ProductImageDto } from './dtos/product-image.dto';
-import { ProductInventoryDto } from './dtos/product-inventory.dto';
-import { UpdateProductDto } from './dtos/update-product.dto';
+  UpdateProductDto,
+} from '@e-commerce-platform/api-contracts';
 
 const productInclude = {
   category: {

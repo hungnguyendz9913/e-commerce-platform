@@ -6,7 +6,7 @@ import { PasswordService } from './services/password.service';
 import { TokenService } from './services/token.service';
 import { SessionRepository } from './session.repository';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
+import { RolesGuard } from '@e-commerce-platform/api-common';
 
 @Module({
   imports: [forwardRef(() => UserModule)],

@@ -9,13 +9,14 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  CreateProductDto,
+  ListProductsQueryDto,
+  UpdateProductDto,
+} from '@e-commerce-platform/api-contracts';
+import { Roles, RolesGuard } from '@e-commerce-platform/api-common';
 import { Roles as RoleValues } from '@e-commerce-platform/types';
-import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { CreateProductDto } from './dtos/create-product.dto';
-import { ListProductsQueryDto } from './dtos/list-products-query.dto';
-import { UpdateProductDto } from './dtos/update-product.dto';
 import { ProductsService } from './products.service';
 
 @Controller('admin/products')

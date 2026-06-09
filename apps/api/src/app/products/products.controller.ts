@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ListProductsQueryDto } from './dtos/list-products-query.dto';
+import { ListProductsQueryDto } from '@e-commerce-platform/api-contracts';
 import { ProductsService } from './products.service';
 
 @Controller('products')

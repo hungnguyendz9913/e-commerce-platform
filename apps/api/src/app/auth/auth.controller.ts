@@ -1,13 +1,17 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '@e-commerce-platform/api-common';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  RefreshTokenDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from '@e-commerce-platform/api-contracts';
 import { AuthService } from './services/auth.service';
-import { ForgotPasswordDto } from './dtos/forgot-password.dto';
-import { LoginDto } from './dtos/login.dto';
-import { RefreshTokenDto } from './dtos/refresh-token.dto';
-import { RegisterDto } from './dtos/register.dto';
-import { ResetPasswordDto } from './dtos/reset-password.dto';
-import { CurrentUser } from './decorators/current-user.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import type { AuthenticatedUser } from './authenticated-user';
 
 @Controller('auth')
 export class AuthController {
