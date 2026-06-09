@@ -40,6 +40,8 @@ describe('AuthService', () => {
   const sessionRepository = {
     createSession: jest.fn(),
     findActiveSession: jest.fn(),
+    findActiveSessionByRefreshTokenHash: jest.fn(),
+    rotateRefreshToken: jest.fn(),
     revokeSession: jest.fn(),
     revokeSessionsForUser: jest.fn(),
   };
@@ -224,6 +226,105 @@ describe('AuthService', () => {
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(sessionRepository.createSession).not.toHaveBeenCalled();
+  });
+
+  it('should rotate refresh token and issue a new access token', async () => {
+    passwordService.hashToken
+      .mockReturnValueOnce('current-refresh-token-hash')
+      .mockReturnValueOnce('next-refresh-token-hash');
+    tokenService.createRefreshToken.mockReturnValue('next-refresh-token');
+    sessionRepository.findActiveSessionByRefreshTokenHash.mockResolvedValue({
+      id: 'session-id',
+      user: {
+        id: 'user-id',
+        email: 'customer@example.com',
+        status: 'ACTIVE',
+        userRoles: [{ role: { name: Roles.CUSTOMER } }],
+      },
+    });
+    sessionRepository.rotateRefreshToken.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.refresh({ refreshToken: 'current-refresh-token' }),
+    ).resolves.toEqual({
+      data: {
+        accessToken: 'access-token',
+        refreshToken: 'next-refresh-token',
+      },
+    });
+    expect(passwordService.hashToken).toHaveBeenNthCalledWith(
+      1,
+      'current-refresh-token',
+    );
+    expect(passwordService.hashToken).toHaveBeenNthCalledWith(
+      2,
+      'next-refresh-token',
+    );
+    expect(
+      sessionRepository.findActiveSessionByRefreshTokenHash,
+    ).toHaveBeenCalledWith('current-refresh-token-hash');
+    expect(sessionRepository.rotateRefreshToken).toHaveBeenCalledWith(
+      'session-id',
+      'current-refresh-token-hash',
+      'next-refresh-token-hash',
+    );
+    expect(tokenService.createAccessToken).toHaveBeenCalledWith({
+      sub: 'user-id',
+      email: 'customer@example.com',
+      roles: [Roles.CUSTOMER],
+      sessionId: 'session-id',
+    });
+  });
+
+  it('should reject refresh with an invalid, expired, or revoked token', async () => {
+    passwordService.hashToken.mockReturnValue('refresh-token-hash');
+    sessionRepository.findActiveSessionByRefreshTokenHash.mockResolvedValue(
+      null,
+    );
+
+    await expect(
+      service.refresh({ refreshToken: 'invalid-refresh-token' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(sessionRepository.rotateRefreshToken).not.toHaveBeenCalled();
+    expect(tokenService.createAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('should reject refresh when token rotation loses the current hash', async () => {
+    passwordService.hashToken
+      .mockReturnValueOnce('current-refresh-token-hash')
+      .mockReturnValueOnce('next-refresh-token-hash');
+    sessionRepository.findActiveSessionByRefreshTokenHash.mockResolvedValue({
+      id: 'session-id',
+      user: {
+        id: 'user-id',
+        email: 'customer@example.com',
+        status: 'ACTIVE',
+        userRoles: [{ role: { name: Roles.CUSTOMER } }],
+      },
+    });
+    sessionRepository.rotateRefreshToken.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.refresh({ refreshToken: 'current-refresh-token' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(tokenService.createAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('should reject refresh for an inactive account', async () => {
+    sessionRepository.findActiveSessionByRefreshTokenHash.mockResolvedValue({
+      id: 'session-id',
+      user: {
+        id: 'user-id',
+        email: 'customer@example.com',
+        status: 'BLOCKED',
+        userRoles: [{ role: { name: Roles.CUSTOMER } }],
+      },
+    });
+
+    await expect(
+      service.refresh({ refreshToken: 'refresh-token' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(sessionRepository.rotateRefreshToken).not.toHaveBeenCalled();
   });
 
   it('should logout the current session', async () => {

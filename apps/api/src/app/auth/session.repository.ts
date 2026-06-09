@@ -34,6 +34,57 @@ export class SessionRepository {
     });
   }
 
+  findActiveSessionByRefreshTokenHash(refreshTokenHash: string) {
+    return this.databaseService.session.findFirst({
+      where: {
+        refreshTokenHash,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      select: {
+        id: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            status: true,
+            userRoles: {
+              select: {
+                role: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  rotateRefreshToken(
+    sessionId: string,
+    currentRefreshTokenHash: string,
+    nextRefreshTokenHash: string,
+  ) {
+    return this.databaseService.session.updateMany({
+      where: {
+        id: sessionId,
+        refreshTokenHash: currentRefreshTokenHash,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      data: {
+        refreshTokenHash: nextRefreshTokenHash,
+      },
+    });
+  }
+
   revokeSession(sessionId: string, userId: string) {
     return this.databaseService.session.updateMany({
       where: {

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
 import { LoginDto } from '../dtos/login.dto';
+import { RefreshTokenDto } from '../dtos/refresh-token.dto';
 import { RegisterDto } from '../dtos/register.dto';
 import { ResetPasswordDto } from '../dtos/reset-password.dto';
 import { SessionRepository } from '../session.repository';
@@ -115,6 +116,47 @@ export class AuthService {
     return {
       data: {
         success: true,
+      },
+    };
+  }
+
+  async refresh(refreshTokenDto: RefreshTokenDto) {
+    const currentRefreshTokenHash = this.passwordService.hashToken(
+      refreshTokenDto.refreshToken,
+    );
+    const session =
+      await this.sessionRepository.findActiveSessionByRefreshTokenHash(
+        currentRefreshTokenHash,
+      );
+
+    if (!session || session.user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const nextRefreshToken = this.tokenService.createRefreshToken();
+    const nextRefreshTokenHash =
+      this.passwordService.hashToken(nextRefreshToken);
+    const rotationResult = await this.sessionRepository.rotateRefreshToken(
+      session.id,
+      currentRefreshTokenHash,
+      nextRefreshTokenHash,
+    );
+
+    if (rotationResult.count !== 1) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    const roles = session.user.userRoles.map((userRole) => userRole.role.name);
+
+    return {
+      data: {
+        accessToken: this.tokenService.createAccessToken({
+          sub: session.user.id,
+          email: session.user.email,
+          roles,
+          sessionId: session.id,
+        }),
+        refreshToken: nextRefreshToken,
       },
     };
   }

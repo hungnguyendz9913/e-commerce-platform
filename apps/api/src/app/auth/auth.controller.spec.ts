@@ -7,6 +7,7 @@ describe('AuthController', () => {
   const authService = {
     register: jest.fn(),
     login: jest.fn(),
+    refresh: jest.fn(),
     logout: jest.fn(),
     me: jest.fn(),
     forgotPassword: jest.fn(),
@@ -50,6 +51,22 @@ describe('AuthController', () => {
       controller.login({
         email: 'customer@example.com',
         password: 'Password123',
+      }),
+    ).toBe(response);
+  });
+
+  it('should call auth service to refresh tokens', () => {
+    const response = {
+      data: {
+        accessToken: 'access-token',
+        refreshToken: 'next-refresh-token',
+      },
+    };
+    authService.refresh.mockReturnValue(response);
+
+    expect(
+      controller.refresh({
+        refreshToken: 'refresh-token',
       }),
     ).toBe(response);
   });
