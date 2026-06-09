@@ -16,6 +16,12 @@
       "path": "./apps/api"
     },
     {
+      "path": "./libs/api/contracts"
+    },
+    {
+      "path": "./libs/api/common"
+    },
+    {
       "path": "./libs/infrastructure/database"
     },
     {
