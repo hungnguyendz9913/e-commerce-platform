@@ -19,6 +19,7 @@ describe('AuthService', () => {
     findUserCredentialsByEmail: jest.fn(),
     findPasswordResetUserByEmail: jest.fn(),
     findPasswordResetUserById: jest.fn(),
+    findCurrentUserById: jest.fn(),
     updatePassword: jest.fn(),
   };
   const userRoleService = {
@@ -33,10 +34,13 @@ describe('AuthService', () => {
     createAccessToken: jest.fn(),
     createRefreshToken: jest.fn(),
     createPasswordResetToken: jest.fn(),
+    verifyAccessToken: jest.fn(),
     verifyPasswordResetToken: jest.fn(),
   };
   const sessionRepository = {
     createSession: jest.fn(),
+    findActiveSession: jest.fn(),
+    revokeSession: jest.fn(),
     revokeSessionsForUser: jest.fn(),
   };
 
@@ -186,6 +190,7 @@ describe('AuthService', () => {
       sub: 'user-id',
       email: 'customer@example.com',
       roles: [Roles.CUSTOMER],
+      sessionId: 'session-id',
     });
   });
 
@@ -219,6 +224,84 @@ describe('AuthService', () => {
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(sessionRepository.createSession).not.toHaveBeenCalled();
+  });
+
+  it('should logout the current session', async () => {
+    tokenService.verifyAccessToken.mockReturnValue({
+      sub: 'user-id',
+      email: 'customer@example.com',
+      roles: [Roles.CUSTOMER],
+      sessionId: 'session-id',
+    });
+    sessionRepository.findActiveSession.mockResolvedValue({ id: 'session-id' });
+    sessionRepository.revokeSession.mockResolvedValue({ count: 1 });
+
+    await expect(service.logout('Bearer access-token')).resolves.toEqual({
+      data: {
+        success: true,
+      },
+    });
+    expect(tokenService.verifyAccessToken).toHaveBeenCalledWith('access-token');
+    expect(sessionRepository.findActiveSession).toHaveBeenCalledWith(
+      'session-id',
+      'user-id',
+    );
+    expect(sessionRepository.revokeSession).toHaveBeenCalledWith(
+      'session-id',
+      'user-id',
+    );
+  });
+
+  it('should reject logout without a bearer token', async () => {
+    await expect(service.logout()).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    expect(sessionRepository.revokeSession).not.toHaveBeenCalled();
+  });
+
+  it('should return the current authenticated user', async () => {
+    tokenService.verifyAccessToken.mockReturnValue({
+      sub: 'user-id',
+      email: 'customer@example.com',
+      roles: [Roles.CUSTOMER],
+      sessionId: 'session-id',
+    });
+    sessionRepository.findActiveSession.mockResolvedValue({ id: 'session-id' });
+    userService.findCurrentUserById.mockResolvedValue({
+      id: 'user-id',
+      email: 'customer@example.com',
+      fullName: 'Nguyen Van A',
+      phone: '0900000000',
+      status: 'ACTIVE',
+      userRoles: [{ role: { name: Roles.CUSTOMER } }],
+    });
+
+    await expect(service.me('Bearer access-token')).resolves.toEqual({
+      data: {
+        id: 'user-id',
+        email: 'customer@example.com',
+        fullName: 'Nguyen Van A',
+        phone: '0900000000',
+        roles: [Roles.CUSTOMER],
+        status: 'active',
+      },
+    });
+    expect(userService.findCurrentUserById).toHaveBeenCalledWith('user-id');
+  });
+
+  it('should reject current user lookup for a revoked session', async () => {
+    tokenService.verifyAccessToken.mockReturnValue({
+      sub: 'user-id',
+      email: 'customer@example.com',
+      roles: [Roles.CUSTOMER],
+      sessionId: 'session-id',
+    });
+    sessionRepository.findActiveSession.mockResolvedValue(null);
+
+    await expect(service.me('Bearer access-token')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    expect(userService.findCurrentUserById).not.toHaveBeenCalled();
   });
 
   it('should create a password reset token for an active account', async () => {

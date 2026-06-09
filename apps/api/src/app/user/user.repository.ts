@@ -61,6 +61,28 @@ export class UserRepository {
     });
   }
 
+  async findCurrentUserById(id: string) {
+    return this.databaseService.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        status: true,
+        userRoles: {
+          select: {
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
   async updatePassword(userId: string, passwordHash: string) {
     return this.databaseService.user.update({
       where: { id: userId },

@@ -18,6 +18,35 @@ export class SessionRepository {
     });
   }
 
+  findActiveSession(sessionId: string, userId: string) {
+    return this.databaseService.session.findFirst({
+      where: {
+        id: sessionId,
+        userId,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
+
+  revokeSession(sessionId: string, userId: string) {
+    return this.databaseService.session.updateMany({
+      where: {
+        id: sessionId,
+        userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+  }
+
   revokeSessionsForUser(userId: string) {
     return this.databaseService.session.updateMany({
       where: {

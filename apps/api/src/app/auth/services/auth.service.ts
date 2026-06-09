@@ -13,7 +13,10 @@ import { UserService } from '../../user/user.service';
 import { UserRoleService } from '../../user-role/user-role.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
-import { REFRESH_TOKEN_TTL_DAYS, PASSWORD_RESET_MESSAGE } from '@e-commerce-platform/types';
+import {
+  REFRESH_TOKEN_TTL_DAYS,
+  PASSWORD_RESET_MESSAGE,
+} from '@e-commerce-platform/types';
 
 @Injectable()
 export class AuthService {
@@ -76,7 +79,7 @@ export class AuthService {
       Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
     );
 
-    await this.sessionRepository.createSession(
+    const session = await this.sessionRepository.createSession(
       user.id,
       refreshTokenHash,
       expiresAt,
@@ -88,6 +91,7 @@ export class AuthService {
           sub: user.id,
           email: user.email,
           roles,
+          sessionId: session.id,
         }),
         refreshToken,
         user: {
@@ -96,6 +100,43 @@ export class AuthService {
           fullName: user.fullName,
           roles,
         },
+      },
+    };
+  }
+
+  async logout(authorizationHeader?: string) {
+    const authenticatedUser = await this.authenticate(authorizationHeader);
+
+    await this.sessionRepository.revokeSession(
+      authenticatedUser.sessionId,
+      authenticatedUser.userId,
+    );
+
+    return {
+      data: {
+        success: true,
+      },
+    };
+  }
+
+  async me(authorizationHeader?: string) {
+    const authenticatedUser = await this.authenticate(authorizationHeader);
+    const user = await this.userService.findCurrentUserById(
+      authenticatedUser.userId,
+    );
+
+    if (!user || user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Invalid or expired session');
+    }
+
+    return {
+      data: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        phone: user.phone,
+        roles: user.userRoles.map((userRole) => userRole.role.name),
+        status: user.status.toLowerCase(),
       },
     };
   }
@@ -159,5 +200,39 @@ export class AuthService {
         message: 'Password has been reset.',
       },
     };
+  }
+
+  private async authenticate(authorizationHeader?: string) {
+    const token = this.extractBearerToken(authorizationHeader);
+    const payload = token ? this.tokenService.verifyAccessToken(token) : null;
+
+    if (!payload) {
+      throw new UnauthorizedException('Invalid or expired session');
+    }
+
+    const session = await this.sessionRepository.findActiveSession(
+      payload.sessionId,
+      payload.sub,
+    );
+
+    if (!session) {
+      throw new UnauthorizedException('Invalid or expired session');
+    }
+
+    return {
+      userId: payload.sub,
+      sessionId: payload.sessionId,
+      roles: payload.roles,
+    };
+  }
+
+  private extractBearerToken(authorizationHeader?: string) {
+    const [scheme, token] = authorizationHeader?.split(' ') ?? [];
+
+    if (scheme !== 'Bearer' || !token) {
+      return null;
+    }
+
+    return token;
   }
 }

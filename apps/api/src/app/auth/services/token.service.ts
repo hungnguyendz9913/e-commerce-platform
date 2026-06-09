@@ -5,6 +5,7 @@ type AccessTokenPayload = {
   sub: string;
   email: string;
   roles: string[];
+  sessionId: string;
 };
 
 type PasswordResetTokenPayload = {
@@ -48,6 +49,28 @@ export class TokenService {
     };
 
     return this.signJwt(tokenPayload);
+  }
+
+  verifyAccessToken(token: string) {
+    const payload = this.verifyJwt(token);
+
+    if (
+      payload?.type !== 'access' ||
+      typeof payload.sub !== 'string' ||
+      typeof payload.email !== 'string' ||
+      typeof payload.sessionId !== 'string' ||
+      !Array.isArray(payload.roles) ||
+      payload.roles.some((role) => typeof role !== 'string')
+    ) {
+      return null;
+    }
+
+    return {
+      sub: payload.sub,
+      email: payload.email,
+      roles: payload.roles as string[],
+      sessionId: payload.sessionId,
+    };
   }
 
   verifyPasswordResetToken(token: string) {

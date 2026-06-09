@@ -39,6 +39,10 @@ export class UserService {
     return this.userRepository.findPasswordResetUserById(id);
   }
 
+  findCurrentUserById(id: string) {
+    return this.userRepository.findCurrentUserById(id);
+  }
+
   updatePassword(userId: string, passwordHash: string) {
     return this.userRepository.updatePassword(userId, passwordHash);
   }
