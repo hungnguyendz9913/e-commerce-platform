@@ -1,0 +1,21 @@
+# AI Coding Rules
+
+- Do not invent scope outside the project docs or approved OpenSpec changes.
+- Read relevant OpenSpec context and specs before coding.
+- Keep API response and error formats consistent with `docs/api_documentation.md`.
+- Use REST JSON contracts unless an approved change says otherwise.
+- Enforce RBAC on protected customer, admin, and gateway routes.
+- Enforce ownership checks for customer resources such as profile, addresses, cart, orders, and payments.
+- Never expose secrets to the frontend.
+- Never return password hashes, refresh token hashes, payment secrets, raw provider secrets, or private credentials in API responses.
+- Never trust a client-side payment result.
+- Verify payment status through the provider or verified webhook before updating order/payment state.
+- Checkout must be transactional and concurrency-safe.
+- Stock deduction must prevent negative stock and overselling.
+- Payment webhooks must verify signature and be idempotent.
+- Use database constraints and transactions for critical integrity, not only application checks.
+- Keep Nx project boundaries and avoid circular dependencies.
+- Prefer shared types/DTOs where they reduce contract drift.
+- Update OpenSpec specs and tests with behavior changes.
+- Do not modify generated files unless the project workflow requires regeneration.
+- Keep application source changes out of OpenSpec-only setup tasks.

@@ -56,3 +56,6 @@ libs/infrastructure/database/src/generated/
 
 # Internal command helper in this project for developer
 command.txt
+
+# Openspec AI tool
+.codex
