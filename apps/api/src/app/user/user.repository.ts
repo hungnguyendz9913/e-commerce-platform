@@ -15,6 +15,28 @@ export class UserRepository {
     return user;
   }
 
+  async findUserCredentialsByEmail(email: string) {
+    return this.databaseService.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        fullName: true,
+        status: true,
+        userRoles: {
+          select: {
+            role: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
   async createUser(createUserDto: CreateUserDto) {
     return this.databaseService.user.create({
       data: {

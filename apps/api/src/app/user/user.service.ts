@@ -26,4 +26,8 @@ export class UserService {
       throw error;
     }
   }
+
+  findUserCredentialsByEmail(email: string) {
+    return this.userRepository.findUserCredentialsByEmail(email);
+  }
 }

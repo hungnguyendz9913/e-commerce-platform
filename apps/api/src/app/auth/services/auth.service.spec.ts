@@ -1,8 +1,10 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { Roles } from '@e-commerce-platform/types';
 import { Test, TestingModule } from '@nestjs/testing';
+import { SessionRepository } from '../session.repository';
 import { AuthService } from './auth.service';
 import { PasswordService } from './password.service';
+import { TokenService } from './token.service';
 import { UserService } from '../../user/user.service';
 import { UserRoleService } from '../../user-role/user-role.service';
 
@@ -10,17 +12,31 @@ describe('AuthService', () => {
   let service: AuthService;
   const userService = {
     createUser: jest.fn(),
+    findUserCredentialsByEmail: jest.fn(),
   };
   const userRoleService = {
     assignRoleToUser: jest.fn(),
   };
   const passwordService = {
     hash: jest.fn(),
+    verify: jest.fn(),
+    hashToken: jest.fn(),
+  };
+  const tokenService = {
+    createAccessToken: jest.fn(),
+    createRefreshToken: jest.fn(),
+  };
+  const sessionRepository = {
+    createSession: jest.fn(),
   };
 
   beforeEach(async () => {
     jest.resetAllMocks();
     passwordService.hash.mockResolvedValue('scrypt:test-hash');
+    passwordService.verify.mockResolvedValue(true);
+    passwordService.hashToken.mockReturnValue('refresh-token-hash');
+    tokenService.createAccessToken.mockReturnValue('access-token');
+    tokenService.createRefreshToken.mockReturnValue('refresh-token');
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -36,6 +52,14 @@ describe('AuthService', () => {
         {
           provide: PasswordService,
           useValue: passwordService,
+        },
+        {
+          provide: TokenService,
+          useValue: tokenService,
+        },
+        {
+          provide: SessionRepository,
+          useValue: sessionRepository,
         },
       ],
     }).compile();
@@ -104,5 +128,85 @@ describe('AuthService', () => {
         fullName: 'Nguyen Van A',
       })
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('should login with valid credentials', async () => {
+    userService.findUserCredentialsByEmail.mockResolvedValue({
+      id: 'user-id',
+      email: 'customer@example.com',
+      passwordHash: 'scrypt:test-hash',
+      fullName: 'Nguyen Van A',
+      status: 'ACTIVE',
+      userRoles: [{ role: { name: Roles.CUSTOMER } }],
+    });
+    sessionRepository.createSession.mockResolvedValue({ id: 'session-id' });
+
+    await expect(
+      service.login({
+        email: 'Customer@Example.com',
+        password: 'Password123',
+      })
+    ).resolves.toEqual({
+      data: {
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        user: {
+          id: 'user-id',
+          email: 'customer@example.com',
+          fullName: 'Nguyen Van A',
+          roles: [Roles.CUSTOMER],
+        },
+      },
+    });
+    expect(userService.findUserCredentialsByEmail).toHaveBeenCalledWith(
+      'customer@example.com'
+    );
+    expect(passwordService.verify).toHaveBeenCalledWith(
+      'Password123',
+      'scrypt:test-hash'
+    );
+    expect(passwordService.hashToken).toHaveBeenCalledWith('refresh-token');
+    expect(sessionRepository.createSession).toHaveBeenCalledWith(
+      'user-id',
+      'refresh-token-hash',
+      expect.any(Date)
+    );
+    expect(tokenService.createAccessToken).toHaveBeenCalledWith({
+      sub: 'user-id',
+      email: 'customer@example.com',
+      roles: [Roles.CUSTOMER],
+    });
+  });
+
+  it('should reject invalid credentials', async () => {
+    userService.findUserCredentialsByEmail.mockResolvedValue(null);
+
+    await expect(
+      service.login({
+        email: 'missing@example.com',
+        password: 'Password123',
+      })
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(passwordService.verify).not.toHaveBeenCalled();
+  });
+
+  it('should reject an invalid password', async () => {
+    userService.findUserCredentialsByEmail.mockResolvedValue({
+      id: 'user-id',
+      email: 'customer@example.com',
+      passwordHash: 'scrypt:test-hash',
+      fullName: 'Nguyen Van A',
+      status: 'ACTIVE',
+      userRoles: [{ role: { name: Roles.CUSTOMER } }],
+    });
+    passwordService.verify.mockResolvedValue(false);
+
+    await expect(
+      service.login({
+        email: 'customer@example.com',
+        password: 'WrongPassword123',
+      })
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(sessionRepository.createSession).not.toHaveBeenCalled();
   });
 });
