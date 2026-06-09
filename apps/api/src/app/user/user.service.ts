@@ -1,6 +1,10 @@
 import type { CreateUserDto } from '@e-commerce-platform/types';
 import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UserRepository } from './user.repository';
 
 @Injectable()
@@ -41,6 +45,25 @@ export class UserService {
 
   findCurrentUserById(id: string) {
     return this.userRepository.findCurrentUserById(id);
+  }
+
+  async getCurrentUserProfile(id: string) {
+    const user = await this.userRepository.findCurrentUserById(id);
+
+    if (!user || user.status !== 'ACTIVE') {
+      throw new UnauthorizedException('Invalid or expired session');
+    }
+
+    return {
+      data: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        status: user.status.toLowerCase(),
+      },
+    };
   }
 
   updatePassword(userId: string, passwordHash: string) {

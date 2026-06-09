@@ -69,6 +69,7 @@ export class UserRepository {
         email: true,
         fullName: true,
         phone: true,
+        avatarUrl: true,
         status: true,
         userRoles: {
           select: {
