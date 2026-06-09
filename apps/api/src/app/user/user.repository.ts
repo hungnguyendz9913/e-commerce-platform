@@ -37,6 +37,40 @@ export class UserRepository {
     });
   }
 
+  async findPasswordResetUserByEmail(email: string) {
+    return this.databaseService.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        status: true,
+      },
+    });
+  }
+
+  async findPasswordResetUserById(id: string) {
+    return this.databaseService.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        status: true,
+      },
+    });
+  }
+
+  async updatePassword(userId: string, passwordHash: string) {
+    return this.databaseService.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+      select: {
+        id: true,
+      },
+    });
+  }
+
   async createUser(createUserDto: CreateUserDto) {
     return this.databaseService.user.create({
       data: {

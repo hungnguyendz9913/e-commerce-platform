@@ -17,4 +17,16 @@ export class SessionRepository {
       },
     });
   }
+
+  revokeSessionsForUser(userId: string) {
+    return this.databaseService.session.updateMany({
+      where: {
+        userId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+  }
 }

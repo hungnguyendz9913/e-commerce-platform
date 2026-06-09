@@ -9,7 +9,7 @@ export class UserService {
 
   async createUser(createUserDto: CreateUserDto) {
     const existingUser = await this.userRepository.findUserByEmail(
-      createUserDto.email
+      createUserDto.email,
     );
 
     if (existingUser) {
@@ -29,5 +29,17 @@ export class UserService {
 
   findUserCredentialsByEmail(email: string) {
     return this.userRepository.findUserCredentialsByEmail(email);
+  }
+
+  findPasswordResetUserByEmail(email: string) {
+    return this.userRepository.findPasswordResetUserByEmail(email);
+  }
+
+  findPasswordResetUserById(id: string) {
+    return this.userRepository.findPasswordResetUserById(id);
+  }
+
+  updatePassword(userId: string, passwordHash: string) {
+    return this.userRepository.updatePassword(userId, passwordHash);
   }
 }

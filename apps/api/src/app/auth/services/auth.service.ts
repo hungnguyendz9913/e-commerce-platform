@@ -1,14 +1,19 @@
 import { Roles } from '@e-commerce-platform/types';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ForgotPasswordDto } from '../dtos/forgot-password.dto';
 import { LoginDto } from '../dtos/login.dto';
 import { RegisterDto } from '../dtos/register.dto';
+import { ResetPasswordDto } from '../dtos/reset-password.dto';
 import { SessionRepository } from '../session.repository';
 import { UserService } from '../../user/user.service';
 import { UserRoleService } from '../../user-role/user-role.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
-
-const REFRESH_TOKEN_TTL_DAYS = 30;
+import { REFRESH_TOKEN_TTL_DAYS, PASSWORD_RESET_MESSAGE } from '@e-commerce-platform/types';
 
 @Injectable()
 export class AuthService {
@@ -17,7 +22,7 @@ export class AuthService {
     private readonly userRoleService: UserRoleService,
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService,
-    private readonly sessionRepository: SessionRepository
+    private readonly sessionRepository: SessionRepository,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -32,7 +37,7 @@ export class AuthService {
     });
     const userRole = await this.userRoleService.assignRoleToUser(
       user.id,
-      Roles.CUSTOMER
+      Roles.CUSTOMER,
     );
 
     return {
@@ -57,7 +62,7 @@ export class AuthService {
 
     const passwordMatches = await this.passwordService.verify(
       loginDto.password,
-      user.passwordHash
+      user.passwordHash,
     );
 
     if (!passwordMatches) {
@@ -68,13 +73,13 @@ export class AuthService {
     const refreshToken = this.tokenService.createRefreshToken();
     const refreshTokenHash = this.passwordService.hashToken(refreshToken);
     const expiresAt = new Date(
-      Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000
+      Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
     );
 
     await this.sessionRepository.createSession(
       user.id,
       refreshTokenHash,
-      expiresAt
+      expiresAt,
     );
 
     return {
@@ -91,6 +96,67 @@ export class AuthService {
           fullName: user.fullName,
           roles,
         },
+      },
+    };
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const email = forgotPasswordDto.email.toLowerCase();
+    const user = await this.userService.findPasswordResetUserByEmail(email);
+
+    if (!user || user.status !== 'ACTIVE') {
+      return {
+        data: {
+          message: PASSWORD_RESET_MESSAGE,
+        },
+      };
+    }
+
+    const resetToken = this.tokenService.createPasswordResetToken({
+      sub: user.id,
+      email: user.email,
+      passwordVersion: this.passwordService.hashToken(user.passwordHash),
+    });
+
+    return {
+      data: {
+        message: PASSWORD_RESET_MESSAGE,
+        resetToken,
+      },
+    };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const payload = this.tokenService.verifyPasswordResetToken(
+      resetPasswordDto.token,
+    );
+
+    if (!payload) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const user = await this.userService.findPasswordResetUserById(payload.sub);
+
+    if (
+      !user ||
+      user.email !== payload.email ||
+      user.status !== 'ACTIVE' ||
+      this.passwordService.hashToken(user.passwordHash) !==
+        payload.passwordVersion
+    ) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const passwordHash = await this.passwordService.hash(
+      resetPasswordDto.password,
+    );
+
+    await this.userService.updatePassword(user.id, passwordHash);
+    await this.sessionRepository.revokeSessionsForUser(user.id);
+
+    return {
+      data: {
+        message: 'Password has been reset.',
       },
     };
   }

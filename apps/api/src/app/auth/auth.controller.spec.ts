@@ -7,6 +7,8 @@ describe('AuthController', () => {
   const authService = {
     register: jest.fn(),
     login: jest.fn(),
+    forgotPassword: jest.fn(),
+    resetPassword: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -46,7 +48,41 @@ describe('AuthController', () => {
       controller.login({
         email: 'customer@example.com',
         password: 'Password123',
-      })
+      }),
+    ).toBe(response);
+  });
+
+  it('should call auth service to start forgot-password flow', () => {
+    const response = {
+      data: {
+        message:
+          'If the email exists, password reset instructions have been generated.',
+        resetToken: 'reset-token',
+      },
+    };
+    authService.forgotPassword.mockReturnValue(response);
+
+    expect(
+      controller.forgotPassword({
+        email: 'customer@example.com',
+      }),
+    ).toBe(response);
+  });
+
+  it('should call auth service to reset password', () => {
+    const response = {
+      data: {
+        message: 'Password has been reset.',
+      },
+    };
+    authService.resetPassword.mockReturnValue(response);
+
+    expect(
+      controller.resetPassword({
+        token: 'reset-token',
+        password: 'NewPassword123',
+        confirmPassword: 'NewPassword123',
+      }),
     ).toBe(response);
   });
 });
