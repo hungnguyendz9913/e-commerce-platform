@@ -117,7 +117,6 @@ describe('AuthController', () => {
       data: {
         message:
           'If the email exists, password reset instructions have been generated.',
-        resetToken: 'reset-token',
       },
     };
     authService.forgotPassword.mockReturnValue(response);

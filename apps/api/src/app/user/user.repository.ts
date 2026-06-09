@@ -1,5 +1,5 @@
 import { DatabaseService } from '@e-commerce-platform/database';
-import type { CreateUserDto } from '@e-commerce-platform/types';
+import type { CreateUserDto, RoleName } from '@e-commerce-platform/types';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
@@ -109,6 +109,57 @@ export class UserRepository {
         status: true,
         createdAt: true,
       },
+    });
+  }
+
+  async createUserWithRole(createUserDto: CreateUserDto, roleName: RoleName) {
+    return this.databaseService.$transaction(async (transaction) => {
+      const user = await transaction.user.create({
+        data: {
+          email: createUserDto.email,
+          passwordHash: createUserDto.passwordHash,
+          fullName: createUserDto.fullName,
+          phone: createUserDto.phone,
+        },
+        select: {
+          id: true,
+          email: true,
+          fullName: true,
+          status: true,
+          createdAt: true,
+        },
+      });
+      const role = await transaction.role.upsert({
+        where: { name: roleName },
+        update: {},
+        create: {
+          name: roleName,
+          description: roleName,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      await transaction.userRole.upsert({
+        where: {
+          userId_roleId: {
+            userId: user.id,
+            roleId: role.id,
+          },
+        },
+        update: {},
+        create: {
+          userId: user.id,
+          roleId: role.id,
+        },
+      });
+
+      return {
+        ...user,
+        role: role.name,
+      };
     });
   }
 }

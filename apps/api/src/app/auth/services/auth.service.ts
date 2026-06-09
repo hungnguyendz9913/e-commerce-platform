@@ -11,7 +11,6 @@ import { RegisterDto } from '../dtos/register.dto';
 import { ResetPasswordDto } from '../dtos/reset-password.dto';
 import { SessionRepository } from '../session.repository';
 import { UserService } from '../../user/user.service';
-import { UserRoleService } from '../../user-role/user-role.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
 import type { AuthenticatedUser } from '../authenticated-user';
@@ -24,7 +23,6 @@ import {
 export class AuthService {
   constructor(
     private readonly userService: UserService,
-    private readonly userRoleService: UserRoleService,
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService,
     private readonly sessionRepository: SessionRepository,
@@ -34,23 +32,19 @@ export class AuthService {
     const email = registerDto.email.toLowerCase();
     const passwordHash = await this.passwordService.hash(registerDto.password);
 
-    const user = await this.userService.createUser({
+    const user = await this.userService.createCustomerUser({
       email,
       passwordHash,
       fullName: registerDto.fullName,
       phone: registerDto.phone,
     });
-    const userRole = await this.userRoleService.assignRoleToUser(
-      user.id,
-      Roles.CUSTOMER,
-    );
 
     return {
       data: {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
-        role: userRole.role.name ?? Roles.CUSTOMER,
+        role: user.role,
         status: user.status.toLowerCase(),
         createdAt: user.createdAt.toISOString(),
       },
@@ -197,24 +191,17 @@ export class AuthService {
     const email = forgotPasswordDto.email.toLowerCase();
     const user = await this.userService.findPasswordResetUserByEmail(email);
 
-    if (!user || user.status !== 'ACTIVE') {
-      return {
-        data: {
-          message: PASSWORD_RESET_MESSAGE,
-        },
-      };
+    if (user?.status === 'ACTIVE') {
+      this.tokenService.createPasswordResetToken({
+        sub: user.id,
+        email: user.email,
+        passwordVersion: this.passwordService.hashToken(user.passwordHash),
+      });
     }
-
-    const resetToken = this.tokenService.createPasswordResetToken({
-      sub: user.id,
-      email: user.email,
-      passwordVersion: this.passwordService.hashToken(user.passwordHash),
-    });
 
     return {
       data: {
         message: PASSWORD_RESET_MESSAGE,
-        resetToken,
       },
     };
   }

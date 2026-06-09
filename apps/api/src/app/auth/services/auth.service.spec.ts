@@ -10,20 +10,17 @@ import { AuthService } from './auth.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
 import { UserService } from '../../user/user.service';
-import { UserRoleService } from '../../user-role/user-role.service';
 
 describe('AuthService', () => {
   let service: AuthService;
   const userService = {
     createUser: jest.fn(),
+    createCustomerUser: jest.fn(),
     findUserCredentialsByEmail: jest.fn(),
     findPasswordResetUserByEmail: jest.fn(),
     findPasswordResetUserById: jest.fn(),
     findCurrentUserById: jest.fn(),
     updatePassword: jest.fn(),
-  };
-  const userRoleService = {
-    assignRoleToUser: jest.fn(),
   };
   const passwordService = {
     hash: jest.fn(),
@@ -63,10 +60,6 @@ describe('AuthService', () => {
           useValue: userService,
         },
         {
-          provide: UserRoleService,
-          useValue: userRoleService,
-        },
-        {
           provide: PasswordService,
           useValue: passwordService,
         },
@@ -90,26 +83,24 @@ describe('AuthService', () => {
 
   it('should register a customer account', async () => {
     const createdAt = new Date('2026-06-08T10:00:00.000Z');
-    userService.createUser.mockResolvedValue({
+    userService.createCustomerUser.mockResolvedValue({
       id: 'user-id',
       email: 'customer@example.com',
       fullName: 'Nguyen Van A',
+      role: Roles.CUSTOMER,
       status: 'ACTIVE',
       createdAt,
     });
-    userRoleService.assignRoleToUser.mockResolvedValue({
-      role: { name: Roles.CUSTOMER },
+
+    const response = await service.register({
+      email: 'Customer@Example.com',
+      password: 'Password123',
+      confirmPassword: 'Password123',
+      fullName: 'Nguyen Van A',
+      phone: '0900000000',
     });
 
-    await expect(
-      service.register({
-        email: 'Customer@Example.com',
-        password: 'Password123',
-        confirmPassword: 'Password123',
-        fullName: 'Nguyen Van A',
-        phone: '0900000000',
-      }),
-    ).resolves.toEqual({
+    expect(response).toEqual({
       data: {
         id: 'user-id',
         email: 'customer@example.com',
@@ -119,21 +110,19 @@ describe('AuthService', () => {
         createdAt: '2026-06-08T10:00:00.000Z',
       },
     });
-    expect(userService.createUser).toHaveBeenCalledWith(
+    expect(response.data).not.toHaveProperty('password');
+    expect(response.data).not.toHaveProperty('passwordHash');
+    expect(userService.createCustomerUser).toHaveBeenCalledWith(
       expect.objectContaining({
         email: 'customer@example.com',
         passwordHash: 'scrypt:test-hash',
       }),
     );
-    expect(userRoleService.assignRoleToUser).toHaveBeenCalledWith(
-      'user-id',
-      Roles.CUSTOMER,
-    );
     expect(passwordService.hash).toHaveBeenCalledWith('Password123');
   });
 
   it('should reject a duplicate email', async () => {
-    userService.createUser.mockRejectedValue(
+    userService.createCustomerUser.mockRejectedValue(
       new ConflictException('Email already exists'),
     );
 
@@ -405,7 +394,7 @@ describe('AuthService', () => {
     expect(userService.findCurrentUserById).not.toHaveBeenCalled();
   });
 
-  it('should create a password reset token for an active account', async () => {
+  it('should return the generic forgot-password response for an active account', async () => {
     userService.findPasswordResetUserByEmail.mockResolvedValue({
       id: 'user-id',
       email: 'customer@example.com',
@@ -420,7 +409,6 @@ describe('AuthService', () => {
       data: {
         message:
           'If the email exists, password reset instructions have been generated.',
-        resetToken: 'reset-token',
       },
     });
     expect(userService.findPasswordResetUserByEmail).toHaveBeenCalledWith(
@@ -438,6 +426,25 @@ describe('AuthService', () => {
 
     await expect(
       service.forgotPassword({ email: 'missing@example.com' }),
+    ).resolves.toEqual({
+      data: {
+        message:
+          'If the email exists, password reset instructions have been generated.',
+      },
+    });
+    expect(tokenService.createPasswordResetToken).not.toHaveBeenCalled();
+  });
+
+  it('should return the generic forgot-password response for an inactive account', async () => {
+    userService.findPasswordResetUserByEmail.mockResolvedValue({
+      id: 'user-id',
+      email: 'inactive@example.com',
+      passwordHash: 'scrypt:test-hash',
+      status: 'INACTIVE',
+    });
+
+    await expect(
+      service.forgotPassword({ email: 'inactive@example.com' }),
     ).resolves.toEqual({
       data: {
         message:
