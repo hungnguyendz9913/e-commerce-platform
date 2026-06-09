@@ -244,7 +244,7 @@ export class AuthService {
     };
   }
 
-  private async authenticate(authorizationHeader?: string) {
+  async authenticate(authorizationHeader?: string) {
     const token = this.extractBearerToken(authorizationHeader);
     const payload = token ? this.tokenService.verifyAccessToken(token) : null;
 
