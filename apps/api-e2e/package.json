@@ -17,8 +17,7 @@
           "passWithNoTests": true
         },
         "dependsOn": [
-          "@e-commerce-platform/api:build",
-          "@e-commerce-platform/api:serve"
+          "@e-commerce-platform/api:build"
         ]
       }
     }
