@@ -7,7 +7,7 @@ import { RegisterDto } from './dtos/register.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { AuthenticatedUser } from './authenticated-user';
+import type { AuthenticatedUser } from './authenticated-user';
 
 @Controller('auth')
 export class AuthController {
