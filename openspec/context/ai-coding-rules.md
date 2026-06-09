@@ -19,3 +19,34 @@
 - Update OpenSpec specs and tests with behavior changes.
 - Do not modify generated files unless the project workflow requires regeneration.
 - Keep application source changes out of OpenSpec-only setup tasks.
+
+## Commit Discipline
+
+The AI agent MUST create small atomic commits.
+
+Rules:
+- After each completed logical change, create a git commit before starting the next logical change.
+- A logical change means one focused unit of work, such as:
+  - create/update OpenSpec proposal files
+  - add DTOs
+  - add database/repository logic
+  - add service logic
+  - add controller endpoints
+  - add tests
+  - fix lint/type errors
+  - update documentation
+- Do not mix unrelated changes in the same commit.
+- Do not leave many unrelated files staged together.
+- Before each commit, run the smallest relevant validation command:
+  - formatting/lint for touched files if available
+  - unit test for touched module if available
+  - typecheck/build if the change affects shared types or public API
+- If validation cannot be run, mention why in the commit summary or final report.
+- Use Conventional Commit style:
+  - feat(auth): add refresh token rotation
+  - fix(auth): reject revoked sessions
+  - test(auth): cover password reset flow
+  - docs(openspec): add auth baseline change
+  - chore(repo): add project scripts
+- Every commit message must describe the actual completed change.
+- Never commit secrets, `.env`, generated local caches, node_modules, or temporary files.
