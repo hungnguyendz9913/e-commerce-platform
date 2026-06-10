@@ -1,4 +1,4 @@
-import { DatabaseService, Prisma } from '@e-commerce-platform/database';
+import { DatabaseService, Prisma, DbClient } from '@e-commerce-platform/database';
 import {
   ProductApprovalStatus,
   ProductStatus,
@@ -24,10 +24,6 @@ export type ProductWithRelations = Prisma.ProductGetPayload<{
   include: typeof productInclude;
 }>;
 
-export type ProductTransaction = Prisma.TransactionClient;
-
-type ProductClient = DatabaseService | ProductTransaction;
-
 @Injectable()
 export class ProductsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -50,8 +46,8 @@ export class ProductsRepository {
     ]);
   }
 
-  findAdminProductById(id: string) {
-    return this.databaseService.product.findUnique({
+  findProductById(id: string, client: DbClient = this.databaseService) {
+    return client.product.findUnique({
       where: { id },
       include: productInclude,
     });
@@ -68,7 +64,10 @@ export class ProductsRepository {
     });
   }
 
-  findActiveCategory(client: ProductClient, categoryId: string) {
+  findActiveCategory(
+    categoryId: string,
+    client: DbClient = this.databaseService,
+  ) {
     return client.category.findFirst({
       where: {
         id: categoryId,
@@ -79,9 +78,9 @@ export class ProductsRepository {
   }
 
   findProductBySkuOrSlug(
-    client: ProductClient,
     conditions: Prisma.ProductWhereInput[],
     excludedProductId?: string,
+    client: DbClient = this.databaseService,
   ) {
     return client.product.findFirst({
       where: {
@@ -92,24 +91,20 @@ export class ProductsRepository {
     });
   }
 
-  createProduct(client: ProductClient, data: Prisma.ProductCreateArgs['data']) {
+  createProduct(
+    data: Prisma.ProductCreateArgs['data'],
+    client: DbClient = this.databaseService,
+  ) {
     return client.product.create({
       data,
       include: productInclude,
     });
   }
 
-  findProductForUpdate(client: ProductClient, id: string) {
-    return client.product.findUnique({
-      where: { id },
-      include: productInclude,
-    });
-  }
-
   updateProduct(
-    client: ProductClient,
     id: string,
     data: Prisma.ProductUpdateArgs['data'],
+    client: DbClient = this.databaseService,
   ) {
     return client.product.update({
       where: { id },
@@ -119,8 +114,8 @@ export class ProductsRepository {
   }
 
   createInventoryMovement(
-    client: ProductClient,
     data: Prisma.InventoryMovementCreateArgs['data'],
+    client: DbClient = this.databaseService,
   ) {
     return client.inventoryMovement.create({
       data,

@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@e-commerce-platform/database';
+import { Prisma, DbClient } from '@e-commerce-platform/database';
 import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
 import {
   CreateProductDto,
@@ -17,15 +17,25 @@ import {
   UpdateProductDto,
 } from '@e-commerce-platform/api-contracts';
 import {
-  ProductTransaction,
   ProductWithRelations,
   ProductsRepository,
 } from './products.repository';
 import { TransactionService } from '@e-commerce-platform/database';
 
+type ProductInventoryUpdate = {
+  next: {
+    stockQuantity: number;
+    reservedQuantity: number;
+  };
+  previousStockQuantity: number;
+};
+
 @Injectable()
 export class ProductsService {
-  constructor(private readonly productsRepository: ProductsRepository, private readonly transactionService: TransactionService) {}
+  constructor(
+    private readonly productsRepository: ProductsRepository,
+    private readonly transactionService: TransactionService,
+  ) {}
 
   async listAdminProducts(query: ListProductsQueryDto) {
     const page = query.page ?? 1;
@@ -76,7 +86,7 @@ export class ProductsService {
   }
 
   async getAdminProduct(id: string) {
-    const product = await this.productsRepository.findAdminProductById(id);
+    const product = await this.productsRepository.findProductById(id);
 
     if (!product) {
       throw new NotFoundException('Product not found');
@@ -101,58 +111,60 @@ export class ProductsService {
 
   async createProduct(createProductDto: CreateProductDto) {
     try {
-      const product = await this.transactionService.run(
-        async (transaction) => {
-          await this.assertActiveCategory(
-            transaction,
-            createProductDto.categoryId,
-          );
-          await this.assertUniqueSkuAndSlug(
-            transaction,
-            createProductDto.sku,
-            createProductDto.slug,
-          );
+      const product = await this.transactionService.run(async (transaction) => {
+        await this.assertActiveCategory(
+          createProductDto.categoryId,
+          transaction,
+        );
+        await this.assertUniqueSkuAndSlug(
+          createProductDto.sku,
+          createProductDto.slug,
+          undefined,
+          transaction,
+        );
 
-          const stockQuantity = createProductDto.inventory?.stockQuantity ?? 0;
-          const reservedQuantity =
-            createProductDto.inventory?.reservedQuantity ?? 0;
-          this.assertInventoryValues({ stockQuantity, reservedQuantity });
+        const stockQuantity = createProductDto.inventory?.stockQuantity ?? 0;
+        const reservedQuantity =
+          createProductDto.inventory?.reservedQuantity ?? 0;
+        this.assertInventoryValues({ stockQuantity, reservedQuantity });
 
-          const createdProduct = await this.productsRepository.createProduct(
-            transaction,
-            {
-              sku: createProductDto.sku,
-              name: createProductDto.name,
-              slug: createProductDto.slug,
-              description: createProductDto.description,
-              price: createProductDto.price,
-              categoryId: createProductDto.categoryId,
-              status: createProductDto.status,
-              approvalStatus: createProductDto.approvalStatus,
-              images: this.createImagesInput(createProductDto.images),
-              inventoryItem: {
-                create: {
-                  stockQuantity,
-                  reservedQuantity,
-                },
+        const createdProduct = await this.productsRepository.createProduct(
+          {
+            sku: createProductDto.sku,
+            name: createProductDto.name,
+            slug: createProductDto.slug,
+            description: createProductDto.description,
+            price: createProductDto.price,
+            categoryId: createProductDto.categoryId,
+            status: createProductDto.status,
+            approvalStatus: createProductDto.approvalStatus,
+            images: this.createImagesInput(createProductDto.images),
+            inventoryItem: {
+              create: {
+                stockQuantity,
+                reservedQuantity,
               },
             },
-          );
+          },
+          transaction,
+        );
 
-          if (stockQuantity > 0) {
-            await this.productsRepository.createInventoryMovement(transaction, {
+        if (stockQuantity > 0) {
+          await this.productsRepository.createInventoryMovement(
+            {
               productId: createdProduct.id,
               movementType: 'IMPORT',
               quantity: stockQuantity,
               beforeQuantity: 0,
               afterQuantity: stockQuantity,
               reason: 'Initial product stock',
-            });
-          }
+            },
+            transaction,
+          );
+        }
 
-          return createdProduct;
-        },
-      );
+        return createdProduct;
+      });
 
       return {
         data: this.toAdminDetail(product),
@@ -165,87 +177,32 @@ export class ProductsService {
 
   async updateProduct(id: string, updateProductDto: UpdateProductDto) {
     try {
-      const product = await this.transactionService.run(
-        async (transaction) => {
-          const existingProduct =
-            await this.productsRepository.findProductForUpdate(transaction, id);
+      const product = await this.transactionService.run(async (transaction) => {
+        const existingProduct = await this.getProductOrThrow(id, transaction);
 
-          if (!existingProduct) {
-            throw new NotFoundException('Product not found');
-          }
+        await this.validateProductUpdate(id, updateProductDto, transaction);
 
-          if (updateProductDto.categoryId) {
-            await this.assertActiveCategory(
-              transaction,
-              updateProductDto.categoryId,
-            );
-          }
+        const inventoryData = this.mergeInventoryValues(
+          existingProduct.inventoryItem,
+          updateProductDto.inventory,
+        );
 
-          if (updateProductDto.sku || updateProductDto.slug) {
-            await this.assertUniqueSkuAndSlug(
-              transaction,
-              updateProductDto.sku,
-              updateProductDto.slug,
-              id,
-            );
-          }
+        const updatedProduct = await this.applyProductUpdate(
+          id,
+          updateProductDto,
+          inventoryData,
+          transaction,
+        );
 
-          const inventoryData = this.mergeInventoryValues(
-            existingProduct.inventoryItem,
-            updateProductDto.inventory,
-          );
+        await this.recordInventoryAdjustmentIfNeeded(
+          id,
+          updateProductDto,
+          inventoryData,
+          transaction,
+        );
 
-          const updatedProduct = await this.productsRepository.updateProduct(
-            transaction,
-            id,
-            {
-              sku: updateProductDto.sku,
-              name: updateProductDto.name,
-              slug: updateProductDto.slug,
-              description: updateProductDto.description,
-              price: updateProductDto.price,
-              categoryId: updateProductDto.categoryId,
-              status: updateProductDto.status,
-              approvalStatus: updateProductDto.approvalStatus,
-              images:
-                updateProductDto.images === undefined
-                  ? undefined
-                  : {
-                      deleteMany: {},
-                      create: this.toImageCreateMany(updateProductDto.images),
-                    },
-              inventoryItem:
-                updateProductDto.inventory === undefined
-                  ? undefined
-                  : {
-                      upsert: {
-                        create: inventoryData.next,
-                        update: inventoryData.next,
-                      },
-                    },
-            },
-          );
-
-          if (
-            updateProductDto.inventory?.stockQuantity !== undefined &&
-            inventoryData.previousStockQuantity !==
-              inventoryData.next.stockQuantity
-          ) {
-            await this.productsRepository.createInventoryMovement(transaction, {
-              productId: id,
-              movementType: 'ADJUSTMENT',
-              quantity:
-                inventoryData.next.stockQuantity -
-                inventoryData.previousStockQuantity,
-              beforeQuantity: inventoryData.previousStockQuantity,
-              afterQuantity: inventoryData.next.stockQuantity,
-              reason: 'Admin product inventory update',
-            });
-          }
-
-          return updatedProduct;
-        },
-      );
+        return updatedProduct;
+      });
 
       return {
         data: this.toAdminDetail(product),
@@ -254,6 +211,115 @@ export class ProductsService {
       this.mapPrismaError(error);
       throw error;
     }
+  }
+
+  private async getProductOrThrow(id: string, client: DbClient) {
+    const product = await this.productsRepository.findProductById(id, client);
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    return product;
+  }
+
+  private async validateProductUpdate(
+    productId: string,
+    updateProductDto: UpdateProductDto,
+    client: DbClient,
+  ) {
+    if (updateProductDto.categoryId) {
+      await this.assertActiveCategory(updateProductDto.categoryId, client);
+    }
+
+    if (updateProductDto.sku || updateProductDto.slug) {
+      await this.assertUniqueSkuAndSlug(
+        updateProductDto.sku,
+        updateProductDto.slug,
+        productId,
+        client,
+      );
+    }
+  }
+
+  private buildProductUpdateInput(
+    updateProductDto: UpdateProductDto,
+    inventoryData: ProductInventoryUpdate,
+  ): Prisma.ProductUpdateArgs['data'] {
+    return {
+      sku: updateProductDto.sku,
+      name: updateProductDto.name,
+      slug: updateProductDto.slug,
+      description: updateProductDto.description,
+      price: updateProductDto.price,
+      categoryId: updateProductDto.categoryId,
+      status: updateProductDto.status,
+      approvalStatus: updateProductDto.approvalStatus,
+      images:
+        updateProductDto.images === undefined
+          ? undefined
+          : {
+              deleteMany: {},
+              create: this.toImageCreateMany(updateProductDto.images),
+            },
+      inventoryItem:
+        updateProductDto.inventory === undefined
+          ? undefined
+          : {
+              upsert: {
+                create: inventoryData.next,
+                update: inventoryData.next,
+              },
+            },
+    };
+  }
+
+  private applyProductUpdate(
+    id: string,
+    updateProductDto: UpdateProductDto,
+    inventoryData: ProductInventoryUpdate,
+    client: DbClient,
+  ) {
+    return this.productsRepository.updateProduct(
+      id,
+      this.buildProductUpdateInput(updateProductDto, inventoryData),
+      client,
+    );
+  }
+
+  private shouldRecordInventoryAdjustment(
+    updateProductDto: UpdateProductDto,
+    inventoryData: ProductInventoryUpdate,
+  ) {
+    return (
+      updateProductDto.inventory?.stockQuantity !== undefined &&
+      inventoryData.previousStockQuantity !== inventoryData.next.stockQuantity
+    );
+  }
+
+  private async recordInventoryAdjustmentIfNeeded(
+    productId: string,
+    updateProductDto: UpdateProductDto,
+    inventoryData: ProductInventoryUpdate,
+    client: DbClient,
+  ) {
+    if (!this.shouldRecordInventoryAdjustment(updateProductDto, inventoryData)) {
+      return;
+    }
+
+    await this.productsRepository.createInventoryMovement(
+      {
+        productId,
+        movementType: 'ADJUSTMENT',
+        quantity:
+          inventoryData.next.stockQuantity -
+          inventoryData.previousStockQuantity,
+        beforeQuantity: inventoryData.previousStockQuantity,
+        afterQuantity: inventoryData.next.stockQuantity,
+        reason: 'Admin product inventory update',
+      },
+      client,
+    );
   }
 
   async deleteProduct(id: string) {
@@ -344,13 +410,10 @@ export class ProductsService {
     };
   }
 
-  private async assertActiveCategory(
-    transaction: ProductTransaction,
-    categoryId: string,
-  ) {
+  private async assertActiveCategory(categoryId: string, client: DbClient) {
     const category = await this.productsRepository.findActiveCategory(
-      transaction,
       categoryId,
+      client,
     );
 
     if (!category) {
@@ -359,10 +422,10 @@ export class ProductsService {
   }
 
   private async assertUniqueSkuAndSlug(
-    transaction: ProductTransaction,
     sku?: string,
     slug?: string,
     excludedProductId?: string,
+    client?: DbClient,
   ) {
     const conditions: Prisma.ProductWhereInput[] = [];
 
@@ -380,9 +443,9 @@ export class ProductsService {
 
     const existingProduct =
       await this.productsRepository.findProductBySkuOrSlug(
-        transaction,
         conditions,
         excludedProductId,
+        client,
       );
 
     if (!existingProduct) {

@@ -98,17 +98,24 @@ function createDatabaseMock() {
   };
 }
 
-function createService(databaseService: DatabaseService) {
-  return new ProductsService(
-    new ProductsRepository(databaseService),
-    new TransactionService(databaseService),
-  );
+function createService(databaseService: DatabaseService, transaction: unknown) {
+  const transactionService = {
+    run: jest.fn((callback) => callback(transaction)),
+  };
+
+  return {
+    service: new ProductsService(
+      new ProductsRepository(databaseService),
+      transactionService as unknown as TransactionService,
+    ),
+    transactionService,
+  };
 }
 
 describe('ProductsService', () => {
   it('should list admin products with filters and management summary fields', async () => {
     const { databaseService, rawDatabaseService } = createDatabaseMock();
-    const service = createService(databaseService);
+    const { service } = createService(databaseService, {});
 
     await expect(
       service.listAdminProducts({
@@ -160,7 +167,10 @@ describe('ProductsService', () => {
 
   it('should create a product with category, images, inventory, and initial movement', async () => {
     const { databaseService, transaction } = createDatabaseMock();
-    const service = createService(databaseService);
+    const { service, transactionService } = createService(
+      databaseService,
+      transaction,
+    );
 
     await expect(
       service.createProduct({
@@ -192,6 +202,7 @@ describe('ProductsService', () => {
       where: { id: 'category-id', status: 'ACTIVE' },
       select: { id: true },
     });
+    expect(transactionService.run).toHaveBeenCalledWith(expect.any(Function));
     expect(transaction.product.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -238,7 +249,10 @@ describe('ProductsService', () => {
       sku: 'SKU-1',
       slug: 'other-product',
     });
-    const service = createService(databaseService);
+    const { service, transactionService } = createService(
+      databaseService,
+      transaction,
+    );
 
     await expect(
       service.createProduct({
@@ -249,6 +263,7 @@ describe('ProductsService', () => {
         categoryId: 'category-id',
       }),
     ).rejects.toThrow(ConflictException);
+    expect(transactionService.run).toHaveBeenCalledWith(expect.any(Function));
     expect(transaction.product.create).not.toHaveBeenCalled();
   });
 
@@ -268,7 +283,10 @@ describe('ProductsService', () => {
         },
       }),
     );
-    const service = createService(databaseService);
+    const { service, transactionService } = createService(
+      databaseService,
+      transaction,
+    );
 
     await expect(
       service.updateProduct('product-id', {
@@ -310,6 +328,7 @@ describe('ProductsService', () => {
         }),
       }),
     );
+    expect(transactionService.run).toHaveBeenCalledWith(expect.any(Function));
     expect(transaction.inventoryMovement.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         movementType: 'ADJUSTMENT',
@@ -330,7 +349,7 @@ describe('ProductsService', () => {
         inventoryMovements: 0,
       },
     });
-    const service = createService(databaseService);
+    const { service } = createService(databaseService, {});
 
     await expect(service.deleteProduct('product-id')).resolves.toEqual({
       data: {
@@ -354,7 +373,7 @@ describe('ProductsService', () => {
         inventoryMovements: 0,
       },
     });
-    const service = createService(databaseService);
+    const { service } = createService(databaseService, {});
 
     await expect(service.deleteProduct('product-id')).resolves.toMatchObject({
       data: {
@@ -376,7 +395,7 @@ describe('ProductsService', () => {
 
   it('should query public listings with active approved visibility only', async () => {
     const { databaseService, rawDatabaseService } = createDatabaseMock();
-    const service = createService(databaseService);
+    const { service } = createService(databaseService, {});
 
     await service.listPublicProducts({});
 
@@ -393,7 +412,7 @@ describe('ProductsService', () => {
   it('should hide inactive, archived, pending, and rejected product details', async () => {
     const { databaseService, rawDatabaseService } = createDatabaseMock();
     rawDatabaseService.product.findFirst.mockResolvedValue(null);
-    const service = createService(databaseService);
+    const { service } = createService(databaseService, {});
 
     await expect(service.getPublicProduct('product-id')).rejects.toThrow(
       NotFoundException,
