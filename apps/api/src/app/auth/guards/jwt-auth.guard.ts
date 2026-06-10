@@ -15,9 +15,8 @@ export class JwtAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const authorizationHeader = request.headers.authorization;
 
-    const authenticatedUser = await this.authService.authenticate(
-      authorizationHeader,
-    );
+    const authenticatedUser =
+      await this.authService.authenticate(authorizationHeader);
 
     if (!authenticatedUser) {
       throw new UnauthorizedException('Invalid or expired session');

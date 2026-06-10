@@ -16,6 +16,7 @@ Admin product management is currently defined only at a broad level, which leave
 ### New Capabilities
 
 ### Modified Capabilities
+
 - `products`: Clarify admin product create, read, update, delete, validation, listing, status, approval, category assignment, and inventory-field behavior.
 - `categories`: Clarify category assignment requirements for admin product create and update operations.
 - `inventory`: Clarify how admin product create and update operations initialize and maintain inventory fields.

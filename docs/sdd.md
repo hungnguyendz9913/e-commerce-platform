@@ -13,9 +13,9 @@
 
 ## Revision History
 
-| Date | Version | A/M/D | Description | Author |
-| :--- | :--- | :---: | :--- | :--- |
-| 08/06/2026 | 1.0 | A | Initial Software Design Document based on SRS and Use-Case Specification | Nguyen Hung Nguyen |
+| Date       | Version | A/M/D | Description                                                              | Author             |
+| :--------- | :------ | :---: | :----------------------------------------------------------------------- | :----------------- |
+| 08/06/2026 | 1.0     |   A   | Initial Software Design Document based on SRS and Use-Case Specification | Nguyen Hung Nguyen |
 
 > A: Added; M: Modified; D: Deleted
 
@@ -23,24 +23,24 @@
 
 ## Table of Contents
 
-1. [Introduction](#1-introduction)  
-2. [Design Overview](#2-design-overview)  
-3. [System Architecture](#3-system-architecture)  
-4. [Nx Monorepo Structure](#4-nx-monorepo-structure)  
-5. [Frontend Design](#5-frontend-design)  
-6. [Backend Design](#6-backend-design)  
-7. [Domain Module Design](#7-domain-module-design)  
-8. [Database Design Overview](#8-database-design-overview)  
-9. [API Design Overview](#9-api-design-overview)  
-10. [Authentication and Authorization Design](#10-authentication-and-authorization-design)  
-11. [Checkout and Order Transaction Design](#11-checkout-and-order-transaction-design)  
-12. [Payment Integration Design](#12-payment-integration-design)  
-13. [Event-driven Design](#13-event-driven-design)  
-14. [Error Handling and Logging](#14-error-handling-and-logging)  
-15. [Security Design](#15-security-design)  
-16. [Testing Design](#16-testing-design)  
-17. [Deployment Design](#17-deployment-design)  
-18. [Design Decisions](#18-design-decisions)  
+1. [Introduction](#1-introduction)
+2. [Design Overview](#2-design-overview)
+3. [System Architecture](#3-system-architecture)
+4. [Nx Monorepo Structure](#4-nx-monorepo-structure)
+5. [Frontend Design](#5-frontend-design)
+6. [Backend Design](#6-backend-design)
+7. [Domain Module Design](#7-domain-module-design)
+8. [Database Design Overview](#8-database-design-overview)
+9. [API Design Overview](#9-api-design-overview)
+10. [Authentication and Authorization Design](#10-authentication-and-authorization-design)
+11. [Checkout and Order Transaction Design](#11-checkout-and-order-transaction-design)
+12. [Payment Integration Design](#12-payment-integration-design)
+13. [Event-driven Design](#13-event-driven-design)
+14. [Error Handling and Logging](#14-error-handling-and-logging)
+15. [Security Design](#15-security-design)
+16. [Testing Design](#16-testing-design)
+17. [Deployment Design](#17-deployment-design)
+18. [Design Decisions](#18-design-decisions)
 19. [Appendix](#19-appendix)
 
 ---
@@ -68,12 +68,12 @@ The system is a fullstack e-commerce application implemented in an Nx monorepo. 
 
 ## 1.3 Intended Audience
 
-| Audience | Purpose |
-| :--- | :--- |
-| Developer | Understand implementation structure, module responsibility, and integration points. |
-| Tester | Understand testable components, flows, and quality strategy. |
-| Instructor / Reviewer | Evaluate design completeness and consistency with requirements. |
-| Maintainer | Understand how the system is organized for future enhancement. |
+| Audience              | Purpose                                                                             |
+| :-------------------- | :---------------------------------------------------------------------------------- |
+| Developer             | Understand implementation structure, module responsibility, and integration points. |
+| Tester                | Understand testable components, flows, and quality strategy.                        |
+| Instructor / Reviewer | Evaluate design completeness and consistency with requirements.                     |
+| Maintainer            | Understand how the system is organized for future enhancement.                      |
 
 ## 1.4 References
 
@@ -103,12 +103,12 @@ The system design aims to satisfy the following goals:
 
 The platform uses a hybrid architectural style:
 
-| Style | Usage |
-| :--- | :--- |
-| Client-Server Architecture | Frontend communicates with backend through REST APIs for user-facing and admin workflows. |
-| Modular Monolith | NestJS backend is organized into domain modules while remaining deployable as one API service for project simplicity. |
-| Event-driven Architecture | Domain events coordinate side effects such as order creation, inventory deduction, payment updates, and status changes. |
-| Layered Architecture | Backend modules are separated into controller, service/use-case, repository, domain, and infrastructure layers. |
+| Style                      | Usage                                                                                                                   |
+| :------------------------- | :---------------------------------------------------------------------------------------------------------------------- |
+| Client-Server Architecture | Frontend communicates with backend through REST APIs for user-facing and admin workflows.                               |
+| Modular Monolith           | NestJS backend is organized into domain modules while remaining deployable as one API service for project simplicity.   |
+| Event-driven Architecture  | Domain events coordinate side effects such as order creation, inventory deduction, payment updates, and status changes. |
+| Layered Architecture       | Backend modules are separated into controller, service/use-case, repository, domain, and infrastructure layers.         |
 
 ---
 
@@ -165,15 +165,15 @@ flowchart TD
 
 ## 3.2 Runtime Components
 
-| Component | Responsibility |
-| :--- | :--- |
-| Browser Client | Runs the web UI and sends requests to the frontend/backend. |
-| Next.js Frontend | Provides storefront, customer pages, checkout UI, and admin dashboard UI. |
-| NestJS API | Provides REST APIs, authentication, business logic, and integration logic. |
-| Database | Stores persistent business data. |
-| Event Bus | Publishes and consumes internal domain events. |
-| Payment Gateway | Processes payments and sends webhook events. |
-| Playwright Test Runner | Executes end-to-end test scenarios. |
+| Component              | Responsibility                                                             |
+| :--------------------- | :------------------------------------------------------------------------- |
+| Browser Client         | Runs the web UI and sends requests to the frontend/backend.                |
+| Next.js Frontend       | Provides storefront, customer pages, checkout UI, and admin dashboard UI.  |
+| NestJS API             | Provides REST APIs, authentication, business logic, and integration logic. |
+| Database               | Stores persistent business data.                                           |
+| Event Bus              | Publishes and consumes internal domain events.                             |
+| Payment Gateway        | Processes payments and sends webhook events.                               |
+| Playwright Test Runner | Executes end-to-end test scenarios.                                        |
 
 ## 3.3 Component Interaction Summary
 
@@ -220,13 +220,13 @@ ecom-ts/
 
 ## 4.2 Workspace Dependency Rules
 
-| Rule | Description |
-| :--- | :--- |
-| Application-to-library dependency | Apps may import from shared and domain libraries. |
-| No circular dependency | Libraries must not form circular imports. |
-| Shared DTO consistency | Frontend and backend should share DTO and enum definitions where useful. |
-| Domain isolation | Domain libraries should avoid depending on UI libraries. |
-| Infrastructure boundary | Domain services should depend on repository interfaces where possible, not direct database implementation details. |
+| Rule                              | Description                                                                                                        |
+| :-------------------------------- | :----------------------------------------------------------------------------------------------------------------- |
+| Application-to-library dependency | Apps may import from shared and domain libraries.                                                                  |
+| No circular dependency            | Libraries must not form circular imports.                                                                          |
+| Shared DTO consistency            | Frontend and backend should share DTO and enum definitions where useful.                                           |
+| Domain isolation                  | Domain libraries should avoid depending on UI libraries.                                                           |
+| Infrastructure boundary           | Domain services should depend on repository interfaces where possible, not direct database implementation details. |
 
 ## 4.3 Package Version Constraint
 
@@ -238,13 +238,13 @@ All packages listed for the project must use version `22.7.5`. This is especiall
 
 ## 5.1 Frontend Technology
 
-| Item | Design |
-| :--- | :--- |
-| Framework | Next.js |
-| Language | TypeScript |
-| UI Scope | Storefront, customer account, checkout, admin dashboard |
-| Testing | Playwright E2E, component-level tests where applicable |
-| API Communication | REST API client using typed DTOs |
+| Item              | Design                                                  |
+| :---------------- | :------------------------------------------------------ |
+| Framework         | Next.js                                                 |
+| Language          | TypeScript                                              |
+| UI Scope          | Storefront, customer account, checkout, admin dashboard |
+| Testing           | Playwright E2E, component-level tests where applicable  |
+| API Communication | REST API client using typed DTOs                        |
 
 ## 5.2 Frontend Page Structure
 
@@ -277,34 +277,34 @@ apps/web/src/
 
 ## 5.3 Frontend Feature Modules
 
-| Feature | Responsibility |
-| :--- | :--- |
-| Auth UI | Registration, sign-in, sign-out, route protection. |
-| Product UI | Product list, filters, search, product detail. |
-| Cart UI | Cart item management and total calculation display. |
+| Feature     | Responsibility                                         |
+| :---------- | :----------------------------------------------------- |
+| Auth UI     | Registration, sign-in, sign-out, route protection.     |
+| Product UI  | Product list, filters, search, product detail.         |
+| Cart UI     | Cart item management and total calculation display.    |
 | Checkout UI | Delivery form, voucher, payment method, order summary. |
-| Order UI | Customer order history and order details. |
-| Admin UI | Admin dashboard and management pages. |
-| Shared UI | Buttons, forms, dialogs, tables, layout components. |
+| Order UI    | Customer order history and order details.              |
+| Admin UI    | Admin dashboard and management pages.                  |
+| Shared UI   | Buttons, forms, dialogs, tables, layout components.    |
 
 ## 5.4 Frontend State Management
 
-| State Type | Suggested Location |
-| :--- | :--- |
-| Authentication state | Auth provider or secure session strategy. |
-| Cart state | Server-backed cart with client cache. |
-| Product filters | URL query parameters for shareable/filterable pages. |
-| Form state | Local component state or form library. |
-| Server state | API client cache or framework-supported data fetching. |
+| State Type           | Suggested Location                                     |
+| :------------------- | :----------------------------------------------------- |
+| Authentication state | Auth provider or secure session strategy.              |
+| Cart state           | Server-backed cart with client cache.                  |
+| Product filters      | URL query parameters for shareable/filterable pages.   |
+| Form state           | Local component state or form library.                 |
+| Server state         | API client cache or framework-supported data fetching. |
 
 ## 5.5 Frontend Route Protection
 
-| Route Group | Access Rule |
-| :--- | :--- |
-| Public routes | Accessible by guest, customer, and admin. |
+| Route Group     | Access Rule                                                        |
+| :-------------- | :----------------------------------------------------------------- |
+| Public routes   | Accessible by guest, customer, and admin.                          |
 | Customer routes | Require authenticated customer or admin depending on route policy. |
-| Checkout routes | Require authenticated customer. |
-| Admin routes | Require authenticated admin role. |
+| Checkout routes | Require authenticated customer.                                    |
+| Admin routes    | Require authenticated admin role.                                  |
 
 ---
 
@@ -312,14 +312,14 @@ apps/web/src/
 
 ## 6.1 Backend Technology
 
-| Item | Design |
-| :--- | :--- |
-| Framework | NestJS |
-| Language | TypeScript |
-| API Style | RESTful JSON APIs |
-| Architecture | Modular, layered, event-aware backend |
-| Persistence | Relational database or compatible transactional database |
-| Authentication | Token/session-based authentication with role claims |
+| Item           | Design                                                   |
+| :------------- | :------------------------------------------------------- |
+| Framework      | NestJS                                                   |
+| Language       | TypeScript                                               |
+| API Style      | RESTful JSON APIs                                        |
+| Architecture   | Modular, layered, event-aware backend                    |
+| Persistence    | Relational database or compatible transactional database |
+| Authentication | Token/session-based authentication with role claims      |
 
 ## 6.2 Backend Layering
 
@@ -338,20 +338,20 @@ module/
 
 ## 6.3 Backend Modules
 
-| Module | Responsibility |
-| :--- | :--- |
-| AuthModule | Registration, login, logout, current user, token/session management. |
-| UsersModule | Profile, customer data, admin customer management. |
-| ProductsModule | Product catalog, product CRUD, product visibility. |
-| CategoriesModule | Product category management. |
-| InventoryModule | Stock tracking, adjustment, stock validation, overselling prevention. |
-| CartModule | Customer cart and cart item operations. |
-| VouchersModule | Voucher validation and discount calculation. |
-| CheckoutModule | Checkout validation and order creation orchestration. |
-| OrdersModule | Order creation, order history, order detail, order lifecycle. |
-| PaymentsModule | Payment request creation, payment status, webhook processing. |
-| AdminModule | Aggregates admin dashboard and management features. |
-| EventsModule | Event bus configuration and domain event handlers. |
+| Module           | Responsibility                                                        |
+| :--------------- | :-------------------------------------------------------------------- |
+| AuthModule       | Registration, login, logout, current user, token/session management.  |
+| UsersModule      | Profile, customer data, admin customer management.                    |
+| ProductsModule   | Product catalog, product CRUD, product visibility.                    |
+| CategoriesModule | Product category management.                                          |
+| InventoryModule  | Stock tracking, adjustment, stock validation, overselling prevention. |
+| CartModule       | Customer cart and cart item operations.                               |
+| VouchersModule   | Voucher validation and discount calculation.                          |
+| CheckoutModule   | Checkout validation and order creation orchestration.                 |
+| OrdersModule     | Order creation, order history, order detail, order lifecycle.         |
+| PaymentsModule   | Payment request creation, payment status, webhook processing.         |
+| AdminModule      | Aggregates admin dashboard and management features.                   |
+| EventsModule     | Event bus configuration and domain event handlers.                    |
 
 ## 6.4 Backend Request Flow
 
@@ -397,12 +397,12 @@ sequenceDiagram
 
 ### Main Services
 
-| Service | Responsibility |
-| :--- | :--- |
-| AuthService | Registration, login, logout, current user. |
-| PasswordService | Password hashing and verification. |
-| TokenService | Token generation, validation, and expiry. |
-| RbacGuard | Role-based route authorization. |
+| Service         | Responsibility                             |
+| :-------------- | :----------------------------------------- |
+| AuthService     | Registration, login, logout, current user. |
+| PasswordService | Password hashing and verification.         |
+| TokenService    | Token generation, validation, and expiry.  |
+| RbacGuard       | Role-based route authorization.            |
 
 ## 7.2 Product Domain
 
@@ -420,11 +420,11 @@ sequenceDiagram
 
 ### Main Services
 
-| Service | Responsibility |
-| :--- | :--- |
-| ProductQueryService | Public product listing and details. |
-| ProductCommandService | Admin product CRUD operations. |
-| CategoryService | Category management. |
+| Service               | Responsibility                      |
+| :-------------------- | :---------------------------------- |
+| ProductQueryService   | Public product listing and details. |
+| ProductCommandService | Admin product CRUD operations.      |
+| CategoryService       | Category management.                |
 
 ## 7.3 Inventory Domain
 
@@ -442,10 +442,10 @@ sequenceDiagram
 
 ### Main Services
 
-| Service | Responsibility |
-| :--- | :--- |
+| Service          | Responsibility                                      |
+| :--------------- | :-------------------------------------------------- |
 | InventoryService | Stock read, adjustment, reservation, and deduction. |
-| StockPolicy | Checks whether requested stock operation is valid. |
+| StockPolicy      | Checks whether requested stock operation is valid.  |
 
 ## 7.4 Cart Domain
 
@@ -463,9 +463,9 @@ sequenceDiagram
 
 ### Main Services
 
-| Service | Responsibility |
-| :--- | :--- |
-| CartService | Cart item commands and cart query. |
+| Service            | Responsibility                       |
+| :----------------- | :----------------------------------- |
+| CartService        | Cart item commands and cart query.   |
 | CartPricingService | Cart subtotal and total calculation. |
 
 ## 7.5 Checkout and Order Domain
@@ -486,11 +486,11 @@ sequenceDiagram
 
 ### Main Services
 
-| Service | Responsibility |
-| :--- | :--- |
-| CheckoutService | Orchestrates checkout validation and order creation. |
-| OrderService | Creates and manages orders. |
-| OrderStatusPolicy | Validates order status transitions. |
+| Service           | Responsibility                                       |
+| :---------------- | :--------------------------------------------------- |
+| CheckoutService   | Orchestrates checkout validation and order creation. |
+| OrderService      | Creates and manages orders.                          |
+| OrderStatusPolicy | Validates order status transitions.                  |
 
 ## 7.6 Payment Domain
 
@@ -509,11 +509,11 @@ sequenceDiagram
 
 ### Main Services
 
-| Service | Responsibility |
-| :--- | :--- |
-| PaymentService | Payment request and status management. |
-| PaymentGatewayAdapter | Gateway-specific integration. |
-| WebhookService | Signature verification and webhook idempotency. |
+| Service               | Responsibility                                  |
+| :-------------------- | :---------------------------------------------- |
+| PaymentService        | Payment request and status management.          |
+| PaymentGatewayAdapter | Gateway-specific integration.                   |
+| WebhookService        | Signature verification and webhook idempotency. |
 
 ---
 
@@ -521,16 +521,16 @@ sequenceDiagram
 
 The detailed data model is defined in `entity_relationship_diagram.md`. The main database groups are:
 
-| Group | Tables |
-| :--- | :--- |
-| Identity | users, roles, user_roles, sessions |
-| Catalog | products, categories, product_images |
-| Inventory | inventory_items, inventory_movements |
-| Cart | carts, cart_items |
-| Checkout | vouchers, voucher_redemptions, addresses |
-| Orders | orders, order_items, order_status_histories |
-| Payments | payments, payment_transactions, payment_webhook_events |
-| Admin / Audit | audit_logs |
+| Group         | Tables                                                 |
+| :------------ | :----------------------------------------------------- |
+| Identity      | users, roles, user_roles, sessions                     |
+| Catalog       | products, categories, product_images                   |
+| Inventory     | inventory_items, inventory_movements                   |
+| Cart          | carts, cart_items                                      |
+| Checkout      | vouchers, voucher_redemptions, addresses               |
+| Orders        | orders, order_items, order_status_histories            |
+| Payments      | payments, payment_transactions, payment_webhook_events |
+| Admin / Audit | audit_logs                                             |
 
 ## 8.1 Database Principles
 
@@ -606,20 +606,20 @@ sequenceDiagram
 
 ## 10.2 Authorization Roles
 
-| Role | Permissions |
-| :--- | :--- |
-| Guest | Browse products, view product details, register, sign in. |
-| Customer | Manage profile, cart, checkout, payment, and own orders. |
-| Admin | Manage products, inventory, orders, customers, approvals, and dashboard. |
+| Role     | Permissions                                                              |
+| :------- | :----------------------------------------------------------------------- |
+| Guest    | Browse products, view product details, register, sign in.                |
+| Customer | Manage profile, cart, checkout, payment, and own orders.                 |
+| Admin    | Manage products, inventory, orders, customers, approvals, and dashboard. |
 
 ## 10.3 Route Protection
 
-| Endpoint Group | Required Access |
-| :--- | :--- |
-| `/products`, `/categories` | Public read access. |
-| `/cart`, `/checkout`, `/orders` | Authenticated customer. |
-| `/admin/**` | Authenticated admin. |
-| `/payments/webhook` | Verified gateway webhook signature. |
+| Endpoint Group                  | Required Access                     |
+| :------------------------------ | :---------------------------------- |
+| `/products`, `/categories`      | Public read access.                 |
+| `/cart`, `/checkout`, `/orders` | Authenticated customer.             |
+| `/admin/**`                     | Authenticated admin.                |
+| `/payments/webhook`             | Verified gateway webhook signature. |
 
 ---
 
@@ -741,17 +741,17 @@ sequenceDiagram
 
 ## 13.1 Domain Events
 
-| Event | Producer | Consumer | Purpose |
-| :--- | :--- | :--- | :--- |
-| UserRegistered | AuthModule | Notification/Audit handler | Record registration or trigger welcome flow. |
-| ProductCreated | ProductsModule | Audit handler | Track product creation. |
-| InventoryUpdated | InventoryModule | Product/Admin handler | Refresh stock status. |
-| OrderCreated | Checkout/OrdersModule | Payment, Audit, Notification handlers | Trigger payment or order notifications. |
-| OrderStatusUpdated | OrdersModule | Notification, Dashboard handlers | Notify customer and update metrics. |
-| PaymentCreated | PaymentsModule | Audit handler | Track payment initialization. |
-| PaymentSucceeded | PaymentsModule | OrdersModule, Notification handler | Mark order as paid. |
-| PaymentFailed | PaymentsModule | OrdersModule | Mark payment failure. |
-| PaymentRefunded | PaymentsModule | OrdersModule | Mark order as refunded. |
+| Event              | Producer              | Consumer                              | Purpose                                      |
+| :----------------- | :-------------------- | :------------------------------------ | :------------------------------------------- |
+| UserRegistered     | AuthModule            | Notification/Audit handler            | Record registration or trigger welcome flow. |
+| ProductCreated     | ProductsModule        | Audit handler                         | Track product creation.                      |
+| InventoryUpdated   | InventoryModule       | Product/Admin handler                 | Refresh stock status.                        |
+| OrderCreated       | Checkout/OrdersModule | Payment, Audit, Notification handlers | Trigger payment or order notifications.      |
+| OrderStatusUpdated | OrdersModule          | Notification, Dashboard handlers      | Notify customer and update metrics.          |
+| PaymentCreated     | PaymentsModule        | Audit handler                         | Track payment initialization.                |
+| PaymentSucceeded   | PaymentsModule        | OrdersModule, Notification handler    | Mark order as paid.                          |
+| PaymentFailed      | PaymentsModule        | OrdersModule                          | Mark payment failure.                        |
+| PaymentRefunded    | PaymentsModule        | OrdersModule                          | Mark order as refunded.                      |
 
 ## 13.2 Event Payload Example
 
@@ -781,15 +781,15 @@ sequenceDiagram
 
 ## 14.1 Error Categories
 
-| Category | Example |
-| :--- | :--- |
-| Validation Error | Missing delivery address or invalid email format. |
-| Authentication Error | Invalid token or expired session. |
-| Authorization Error | Customer attempts to access admin route. |
-| Not Found Error | Product or order does not exist. |
-| Business Rule Error | Requested quantity exceeds stock. |
-| Payment Error | Payment gateway rejects transaction. |
-| System Error | Database connection failure. |
+| Category             | Example                                           |
+| :------------------- | :------------------------------------------------ |
+| Validation Error     | Missing delivery address or invalid email format. |
+| Authentication Error | Invalid token or expired session.                 |
+| Authorization Error  | Customer attempts to access admin route.          |
+| Not Found Error      | Product or order does not exist.                  |
+| Business Rule Error  | Requested quantity exceeds stock.                 |
+| Payment Error        | Payment gateway rejects transaction.              |
+| System Error         | Database connection failure.                      |
 
 ## 14.2 Logging Rules
 
@@ -804,16 +804,16 @@ sequenceDiagram
 
 ## 15.1 Security Controls
 
-| Area | Control |
-| :--- | :--- |
-| Password | Secure hashing, never plaintext. |
-| Authentication | Secure token or session. |
-| Authorization | RBAC for customer and admin routes. |
-| Input | DTO validation and sanitization. |
-| Payment | Signature verification and secret protection. |
-| API | HTTPS in production. |
-| Database | Parameterized queries or ORM-safe query builder. |
-| Admin | Strict route and permission checking. |
+| Area           | Control                                          |
+| :------------- | :----------------------------------------------- |
+| Password       | Secure hashing, never plaintext.                 |
+| Authentication | Secure token or session.                         |
+| Authorization  | RBAC for customer and admin routes.              |
+| Input          | DTO validation and sanitization.                 |
+| Payment        | Signature verification and secret protection.    |
+| API            | HTTPS in production.                             |
+| Database       | Parameterized queries or ORM-safe query builder. |
+| Admin          | Strict route and permission checking.            |
 
 ## 15.2 Sensitive Data
 
@@ -834,30 +834,30 @@ These values must be protected through hashing, encryption where appropriate, en
 
 ## 16.1 Test Levels
 
-| Test Level | Scope |
-| :--- | :--- |
-| Unit Test | Services, policies, validators, utility functions. |
+| Test Level       | Scope                                                            |
+| :--------------- | :--------------------------------------------------------------- |
+| Unit Test        | Services, policies, validators, utility functions.               |
 | Integration Test | Module-level behavior with database or mocked external services. |
-| End-to-End Test | Full user workflows through UI and APIs using Playwright. |
+| End-to-End Test  | Full user workflows through UI and APIs using Playwright.        |
 
 ## 16.2 Playwright E2E Coverage
 
-| Test ID | Workflow |
-| :--- | :--- |
-| E2E-001 | Register with valid information. |
-| E2E-002 | Reject duplicate registration email. |
-| E2E-003 | Sign in as customer. |
-| E2E-004 | Browse, search, and filter products. |
-| E2E-005 | View product detail. |
-| E2E-006 | Add, update, and remove cart item. |
-| E2E-007 | Checkout with valid cart. |
-| E2E-008 | Apply valid and invalid voucher. |
-| E2E-009 | Complete mocked online payment. |
-| E2E-010 | View customer order history. |
-| E2E-011 | Sign in as admin. |
-| E2E-012 | Admin creates and updates product. |
-| E2E-013 | Admin updates stock. |
-| E2E-014 | Admin updates order status. |
+| Test ID | Workflow                                   |
+| :------ | :----------------------------------------- |
+| E2E-001 | Register with valid information.           |
+| E2E-002 | Reject duplicate registration email.       |
+| E2E-003 | Sign in as customer.                       |
+| E2E-004 | Browse, search, and filter products.       |
+| E2E-005 | View product detail.                       |
+| E2E-006 | Add, update, and remove cart item.         |
+| E2E-007 | Checkout with valid cart.                  |
+| E2E-008 | Apply valid and invalid voucher.           |
+| E2E-009 | Complete mocked online payment.            |
+| E2E-010 | View customer order history.               |
+| E2E-011 | Sign in as admin.                          |
+| E2E-012 | Admin creates and updates product.         |
+| E2E-013 | Admin updates stock.                       |
+| E2E-014 | Admin updates order status.                |
 | E2E-015 | Payment webhook is processed idempotently. |
 
 ---
@@ -890,37 +890,37 @@ flowchart TD
 
 ## 17.2 Docker Services
 
-| Service | Description |
-| :--- | :--- |
-| web | Next.js frontend application. |
-| api | NestJS backend API. |
-| db | Database service. |
-| e2e | Optional Playwright test runner service. |
+| Service | Description                              |
+| :------ | :--------------------------------------- |
+| web     | Next.js frontend application.            |
+| api     | NestJS backend API.                      |
+| db      | Database service.                        |
+| e2e     | Optional Playwright test runner service. |
 
 ## 17.3 Environment Variables
 
-| Variable | Description |
-| :--- | :--- |
-| `DATABASE_URL` | Database connection string. |
-| `JWT_SECRET` | Authentication token secret if JWT is used. |
-| `PAYMENT_GATEWAY_SECRET` | Secret for payment gateway API. |
-| `PAYMENT_WEBHOOK_SECRET` | Secret used to verify webhook signatures. |
-| `NEXT_PUBLIC_API_BASE_URL` | Public frontend API base URL. |
-| `NODE_ENV` | Runtime environment. |
+| Variable                   | Description                                 |
+| :------------------------- | :------------------------------------------ |
+| `DATABASE_URL`             | Database connection string.                 |
+| `JWT_SECRET`               | Authentication token secret if JWT is used. |
+| `PAYMENT_GATEWAY_SECRET`   | Secret for payment gateway API.             |
+| `PAYMENT_WEBHOOK_SECRET`   | Secret used to verify webhook signatures.   |
+| `NEXT_PUBLIC_API_BASE_URL` | Public frontend API base URL.               |
+| `NODE_ENV`                 | Runtime environment.                        |
 
 ---
 
 # 18. Design Decisions
 
-| Decision | Rationale |
-| :--- | :--- |
-| Use Nx monorepo | Simplifies fullstack TypeScript code sharing and project organization. |
-| Use Next.js frontend | Supports modern React UI, routing, server rendering options, and SEO-friendly product pages. |
-| Use NestJS backend | Provides modular server architecture, decorators, DI, guards, and scalable API structure. |
-| Use REST APIs | Simple and suitable for standard CRUD and transaction workflows. |
-| Use event-driven module communication | Decouples order, inventory, payment, notification, and audit workflows. |
-| Use transactional checkout | Prevents inconsistent orders and stock values. |
-| Use Playwright | Validates real user workflows end-to-end. |
+| Decision                              | Rationale                                                                                    |
+| :------------------------------------ | :------------------------------------------------------------------------------------------- |
+| Use Nx monorepo                       | Simplifies fullstack TypeScript code sharing and project organization.                       |
+| Use Next.js frontend                  | Supports modern React UI, routing, server rendering options, and SEO-friendly product pages. |
+| Use NestJS backend                    | Provides modular server architecture, decorators, DI, guards, and scalable API structure.    |
+| Use REST APIs                         | Simple and suitable for standard CRUD and transaction workflows.                             |
+| Use event-driven module communication | Decouples order, inventory, payment, notification, and audit workflows.                      |
+| Use transactional checkout            | Prevents inconsistent orders and stock values.                                               |
+| Use Playwright                        | Validates real user workflows end-to-end.                                                    |
 
 ---
 
@@ -930,24 +930,24 @@ flowchart TD
 
 ### Order Status
 
-| Status | Meaning |
-| :--- | :--- |
-| Pending | Order is created but not processed. |
-| Processing | Order is being prepared. |
-| Shipped | Order has been shipped. |
-| Delivered | Order has been delivered. |
-| Canceled | Order has been canceled. |
-| Refunded | Order has been refunded. |
+| Status     | Meaning                             |
+| :--------- | :---------------------------------- |
+| Pending    | Order is created but not processed. |
+| Processing | Order is being prepared.            |
+| Shipped    | Order has been shipped.             |
+| Delivered  | Order has been delivered.           |
+| Canceled   | Order has been canceled.            |
+| Refunded   | Order has been refunded.            |
 
 ### Payment Status
 
-| Status | Meaning |
-| :--- | :--- |
-| Pending | Payment is waiting for completion. |
+| Status    | Meaning                                 |
+| :-------- | :-------------------------------------- |
+| Pending   | Payment is waiting for completion.      |
 | Succeeded | Payment has been verified successfully. |
-| Failed | Payment failed. |
-| Canceled | Payment was canceled. |
-| Refunded | Payment has been refunded. |
+| Failed    | Payment failed.                         |
+| Canceled  | Payment was canceled.                   |
+| Refunded  | Payment has been refunded.              |
 
 ## 19.2 Future Enhancements
 

@@ -12,18 +12,10 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
-
-function normalizeOptionalString(value: unknown) {
-  if (typeof value !== 'string') {
-    return value;
-  }
-
-  const trimmedValue = value.trim();
-  return trimmedValue.length > 0 ? trimmedValue : undefined;
-}
+import { normalizeOptionalString } from '../products/validators.js';
 
 @ValidatorConstraint({ name: 'matchesProperty', async: false })
-class MatchesPropertyConstraint implements ValidatorConstraintInterface {
+export class MatchesPropertyConstraint implements ValidatorConstraintInterface {
   validate(value: unknown, args: ValidationArguments) {
     const [propertyName] = args.constraints as string[];
     const object = args.object as Record<string, unknown>;
@@ -68,7 +60,8 @@ export class RegisterDto {
   @IsString()
   @MaxLength(20)
   @Matches(/^\+?[0-9\s.-]+$/, {
-    message: 'phone must contain only digits, spaces, plus signs, dots, or dashes',
+    message:
+      'phone must contain only digits, spaces, plus signs, dots, or dashes',
   })
   phone?: string;
 }

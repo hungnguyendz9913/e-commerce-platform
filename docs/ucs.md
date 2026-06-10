@@ -15,38 +15,38 @@
 
 ## Revision History
 
-| Date | Version | Description | Author |
-| :--- | :--- | :--- | :--- |
-| 05/06/2026 | 1.0 | Initial Use-Case Specification based on project proposal and RUP use-case template | Nguyen Hung Nguyen |
+| Date       | Version | Description                                                                        | Author             |
+| :--------- | :------ | :--------------------------------------------------------------------------------- | :----------------- |
+| 05/06/2026 | 1.0     | Initial Use-Case Specification based on project proposal and RUP use-case template | Nguyen Hung Nguyen |
 
 ---
 
 ## Table of Contents
 
-1. [Introduction](#1-introduction)  
-2. [Actor List](#2-actor-list)  
-3. [Use-Case Overview](#3-use-case-overview)  
-4. [Use-Case Relationship Overview](#4-use-case-relationship-overview)  
-5. [Use-Case Specifications](#5-use-case-specifications)  
-   - [UC-01 Register Account](#uc-01-register-account)  
-   - [UC-02 Sign In](#uc-02-sign-in)  
-   - [UC-03 Manage Profile](#uc-03-manage-profile)  
-   - [UC-04 Browse and Search Products](#uc-04-browse-and-search-products)  
-   - [UC-05 View Product Details](#uc-05-view-product-details)  
-   - [UC-06 Manage Shopping Cart](#uc-06-manage-shopping-cart)  
-   - [UC-07 Checkout](#uc-07-checkout)  
-   - [UC-08 Apply Voucher](#uc-08-apply-voucher)  
-   - [UC-09 Make Payment](#uc-09-make-payment)  
-   - [UC-10 View and Manage Customer Orders](#uc-10-view-and-manage-customer-orders)  
-   - [UC-11 Manage Products](#uc-11-manage-products)  
-   - [UC-12 Manage Inventory](#uc-12-manage-inventory)  
-   - [UC-13 Manage Order Lifecycle](#uc-13-manage-order-lifecycle)  
-   - [UC-14 Manage Customers](#uc-14-manage-customers)  
-   - [UC-15 Approve Products](#uc-15-approve-products)  
-   - [UC-16 Track Revenue and Dashboard Metrics](#uc-16-track-revenue-and-dashboard-metrics)  
-   - [UC-17 Process Payment Webhook](#uc-17-process-payment-webhook)  
-6. [Use-Case Priority Matrix](#6-use-case-priority-matrix)  
-7. [Traceability to Core Features](#7-traceability-to-core-features)  
+1. [Introduction](#1-introduction)
+2. [Actor List](#2-actor-list)
+3. [Use-Case Overview](#3-use-case-overview)
+4. [Use-Case Relationship Overview](#4-use-case-relationship-overview)
+5. [Use-Case Specifications](#5-use-case-specifications)
+   - [UC-01 Register Account](#uc-01-register-account)
+   - [UC-02 Sign In](#uc-02-sign-in)
+   - [UC-03 Manage Profile](#uc-03-manage-profile)
+   - [UC-04 Browse and Search Products](#uc-04-browse-and-search-products)
+   - [UC-05 View Product Details](#uc-05-view-product-details)
+   - [UC-06 Manage Shopping Cart](#uc-06-manage-shopping-cart)
+   - [UC-07 Checkout](#uc-07-checkout)
+   - [UC-08 Apply Voucher](#uc-08-apply-voucher)
+   - [UC-09 Make Payment](#uc-09-make-payment)
+   - [UC-10 View and Manage Customer Orders](#uc-10-view-and-manage-customer-orders)
+   - [UC-11 Manage Products](#uc-11-manage-products)
+   - [UC-12 Manage Inventory](#uc-12-manage-inventory)
+   - [UC-13 Manage Order Lifecycle](#uc-13-manage-order-lifecycle)
+   - [UC-14 Manage Customers](#uc-14-manage-customers)
+   - [UC-15 Approve Products](#uc-15-approve-products)
+   - [UC-16 Track Revenue and Dashboard Metrics](#uc-16-track-revenue-and-dashboard-metrics)
+   - [UC-17 Process Payment Webhook](#uc-17-process-payment-webhook)
+6. [Use-Case Priority Matrix](#6-use-case-priority-matrix)
+7. [Traceability to Core Features](#7-traceability-to-core-features)
 8. [Appendix](#8-appendix)
 
 ---
@@ -110,39 +110,39 @@ External systems include:
 
 # 2. Actor List
 
-| Actor | Description |
-| :--- | :--- |
-| Guest | A visitor who has not signed in. A guest can browse and search products, view product details, register, and sign in. |
-| Customer | An authenticated user who can manage profile, manage cart, checkout, pay, and manage personal orders. |
-| Admin | A privileged user who manages products, inventory, orders, customers, approvals, revenue, and dashboard data. |
-| Payment Gateway | External payment provider responsible for processing payments and sending callback or webhook events. |
-| System Scheduler | Optional internal/system actor for scheduled checks, cleanup, reporting, or automated maintenance tasks. |
-| Database | Persistence layer that stores user, product, cart, order, payment, voucher, and inventory data. |
-| Event Bus | Internal communication mechanism used by backend modules to publish and consume domain events. |
+| Actor            | Description                                                                                                           |
+| :--------------- | :-------------------------------------------------------------------------------------------------------------------- |
+| Guest            | A visitor who has not signed in. A guest can browse and search products, view product details, register, and sign in. |
+| Customer         | An authenticated user who can manage profile, manage cart, checkout, pay, and manage personal orders.                 |
+| Admin            | A privileged user who manages products, inventory, orders, customers, approvals, revenue, and dashboard data.         |
+| Payment Gateway  | External payment provider responsible for processing payments and sending callback or webhook events.                 |
+| System Scheduler | Optional internal/system actor for scheduled checks, cleanup, reporting, or automated maintenance tasks.              |
+| Database         | Persistence layer that stores user, product, cart, order, payment, voucher, and inventory data.                       |
+| Event Bus        | Internal communication mechanism used by backend modules to publish and consume domain events.                        |
 
 ---
 
 # 3. Use-Case Overview
 
-| Use Case ID | Use Case Name | Primary Actor | Priority |
-| :--- | :--- | :--- | :--- |
-| UC-01 | Register Account | Guest | High |
-| UC-02 | Sign In | Guest / Customer / Admin | High |
-| UC-03 | Manage Profile | Customer | High |
-| UC-04 | Browse and Search Products | Guest / Customer | High |
-| UC-05 | View Product Details | Guest / Customer | High |
-| UC-06 | Manage Shopping Cart | Customer | High |
-| UC-07 | Checkout | Customer | High |
-| UC-08 | Apply Voucher | Customer | Medium |
-| UC-09 | Make Payment | Customer | High |
-| UC-10 | View and Manage Customer Orders | Customer | High |
-| UC-11 | Manage Products | Admin | High |
-| UC-12 | Manage Inventory | Admin | High |
-| UC-13 | Manage Order Lifecycle | Admin | High |
-| UC-14 | Manage Customers | Admin | Medium |
-| UC-15 | Approve Products | Admin | Medium |
-| UC-16 | Track Revenue and Dashboard Metrics | Admin | Medium |
-| UC-17 | Process Payment Webhook | Payment Gateway | High |
+| Use Case ID | Use Case Name                       | Primary Actor            | Priority |
+| :---------- | :---------------------------------- | :----------------------- | :------- |
+| UC-01       | Register Account                    | Guest                    | High     |
+| UC-02       | Sign In                             | Guest / Customer / Admin | High     |
+| UC-03       | Manage Profile                      | Customer                 | High     |
+| UC-04       | Browse and Search Products          | Guest / Customer         | High     |
+| UC-05       | View Product Details                | Guest / Customer         | High     |
+| UC-06       | Manage Shopping Cart                | Customer                 | High     |
+| UC-07       | Checkout                            | Customer                 | High     |
+| UC-08       | Apply Voucher                       | Customer                 | Medium   |
+| UC-09       | Make Payment                        | Customer                 | High     |
+| UC-10       | View and Manage Customer Orders     | Customer                 | High     |
+| UC-11       | Manage Products                     | Admin                    | High     |
+| UC-12       | Manage Inventory                    | Admin                    | High     |
+| UC-13       | Manage Order Lifecycle              | Admin                    | High     |
+| UC-14       | Manage Customers                    | Admin                    | Medium   |
+| UC-15       | Approve Products                    | Admin                    | Medium   |
+| UC-16       | Track Revenue and Dashboard Metrics | Admin                    | Medium   |
+| UC-17       | Process Payment Webhook             | Payment Gateway          | High     |
 
 ---
 
@@ -289,18 +289,18 @@ Guest
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| Successful Registration | A guest provides valid information and receives a new account. |
-| Duplicate Email | A guest attempts to register with an email already used by another account. |
-| Invalid Password | A guest submits a weak password or mismatched confirmation password. |
+| Scenario                | Description                                                                 |
+| :---------------------- | :-------------------------------------------------------------------------- |
+| Successful Registration | A guest provides valid information and receives a new account.              |
+| Duplicate Email         | A guest attempts to register with an email already used by another account. |
+| Invalid Password        | A guest submits a weak password or mismatched confirmation password.        |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Email Verification | The system may send a verification email before activating the account. |
-| Social Sign-up | The system may support registration using Google, Facebook, or another identity provider. |
+| Extension Point    | Description                                                                               |
+| :----------------- | :---------------------------------------------------------------------------------------- |
+| Email Verification | The system may send a verification email before activating the account.                   |
+| Social Sign-up     | The system may support registration using Google, Facebook, or another identity provider. |
 
 ### 11. Special Requirements
 
@@ -392,18 +392,18 @@ Guest, Customer, or Admin
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| Customer Sign In | A customer signs in and accesses customer features. |
-| Admin Sign In | An admin signs in and accesses the admin dashboard. |
-| Failed Sign In | A user provides incorrect credentials and is denied access. |
+| Scenario         | Description                                                 |
+| :--------------- | :---------------------------------------------------------- |
+| Customer Sign In | A customer signs in and accesses customer features.         |
+| Admin Sign In    | An admin signs in and accesses the admin dashboard.         |
+| Failed Sign In   | A user provides incorrect credentials and is denied access. |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
+| Extension Point             | Description                                         |
+| :-------------------------- | :-------------------------------------------------- |
 | Multi-factor Authentication | The system may require an OTP or verification code. |
-| Password Recovery | The system may provide a forgot-password workflow. |
+| Password Recovery           | The system may provide a forgot-password workflow.  |
 
 ### 11. Special Requirements
 
@@ -489,17 +489,17 @@ Customer
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| View Profile | Customer views current profile data. |
-| Update Profile | Customer updates valid personal information. |
+| Scenario       | Description                                                   |
+| :------------- | :------------------------------------------------------------ |
+| View Profile   | Customer views current profile data.                          |
+| Update Profile | Customer updates valid personal information.                  |
 | Invalid Update | Customer submits invalid data and receives validation errors. |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Change Password | The customer may change password from the profile area. |
+| Extension Point  | Description                                                |
+| :--------------- | :--------------------------------------------------------- |
+| Change Password  | The customer may change password from the profile area.    |
 | Manage Addresses | The customer may manage multiple saved delivery addresses. |
 
 ### 11. Special Requirements
@@ -586,19 +586,19 @@ Guest or Customer
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
+| Scenario        | Description                                                        |
+| :-------------- | :----------------------------------------------------------------- |
 | Browse Products | Actor opens the product listing page and views available products. |
-| Search Products | Actor searches using a keyword. |
-| Filter Products | Actor filters by category, price, or stock status. |
-| Empty Result | Search and filter criteria return no products. |
+| Search Products | Actor searches using a keyword.                                    |
+| Filter Products | Actor filters by category, price, or stock status.                 |
+| Empty Result    | Search and filter criteria return no products.                     |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
+| Extension Point              | Description                                                                  |
+| :--------------------------- | :--------------------------------------------------------------------------- |
 | Personalized Recommendations | The system may show recommended products based on browsing or order history. |
-| Advanced Search | The system may support full-text search, tags, or faceted search. |
+| Advanced Search              | The system may support full-text search, tags, or faceted search.            |
 
 ### 11. Special Requirements
 
@@ -684,17 +684,17 @@ Guest or Customer
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| View Available Product | Actor views details of an in-stock product. |
+| Scenario                  | Description                                               |
+| :------------------------ | :-------------------------------------------------------- |
+| View Available Product    | Actor views details of an in-stock product.               |
 | View Out-of-stock Product | Actor views a product that cannot currently be purchased. |
-| Product Not Found | Actor opens an invalid or deleted product URL. |
+| Product Not Found         | Actor opens an invalid or deleted product URL.            |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Product Reviews | The system may display customer ratings and reviews. |
+| Extension Point  | Description                                             |
+| :--------------- | :------------------------------------------------------ |
+| Product Reviews  | The system may display customer ratings and reviews.    |
 | Related Products | The system may display related or recommended products. |
 
 ### 11. Special Requirements
@@ -795,19 +795,19 @@ Customer
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| Add Item | Customer adds an available product to the cart. |
-| Update Quantity | Customer changes the quantity of a cart item. |
-| Remove Item | Customer removes a product from the cart. |
-| Stock Conflict | Customer requests more units than available stock. |
+| Scenario        | Description                                        |
+| :-------------- | :------------------------------------------------- |
+| Add Item        | Customer adds an available product to the cart.    |
+| Update Quantity | Customer changes the quantity of a cart item.      |
+| Remove Item     | Customer removes a product from the cart.          |
+| Stock Conflict  | Customer requests more units than available stock. |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Save for Later | The customer may move items to a saved list. |
-| Guest Cart | The system may support guest cart before sign-in. |
+| Extension Point | Description                                       |
+| :-------------- | :------------------------------------------------ |
+| Save for Later  | The customer may move items to a saved list.      |
+| Guest Cart      | The system may support guest cart before sign-in. |
 
 ### 11. Special Requirements
 
@@ -938,20 +938,20 @@ Customer
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| Successful Checkout | Customer checks out with valid cart, delivery information, and payment method. |
-| Stock Conflict | Product stock changes before checkout is confirmed. |
-| Invalid Checkout Data | Customer submits incomplete delivery information. |
-| Transaction Failure | Database transaction fails and no partial order is saved. |
+| Scenario              | Description                                                                    |
+| :-------------------- | :----------------------------------------------------------------------------- |
+| Successful Checkout   | Customer checks out with valid cart, delivery information, and payment method. |
+| Stock Conflict        | Product stock changes before checkout is confirmed.                            |
+| Invalid Checkout Data | Customer submits incomplete delivery information.                              |
+| Transaction Failure   | Database transaction fails and no partial order is saved.                      |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Apply Voucher | Voucher validation and discount calculation may extend checkout. |
-| Payment Gateway | Online payment flow may extend checkout after order creation. |
-| Shipping Provider | The system may integrate shipping fee calculation or tracking. |
+| Extension Point   | Description                                                      |
+| :---------------- | :--------------------------------------------------------------- |
+| Apply Voucher     | Voucher validation and discount calculation may extend checkout. |
+| Payment Gateway   | Online payment flow may extend checkout after order creation.    |
+| Shipping Provider | The system may integrate shipping fee calculation or tracking.   |
 
 ### 11. Special Requirements
 
@@ -1055,18 +1055,18 @@ Customer
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| Valid Voucher | Customer applies an eligible voucher and receives a discount. |
-| Expired Voucher | Customer applies an expired code and receives an error. |
+| Scenario        | Description                                                     |
+| :-------------- | :-------------------------------------------------------------- |
+| Valid Voucher   | Customer applies an eligible voucher and receives a discount.   |
+| Expired Voucher | Customer applies an expired code and receives an error.         |
 | Ineligible Cart | Customer applies a voucher that does not match cart conditions. |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
+| Extension Point     | Description                                           |
+| :------------------ | :---------------------------------------------------- |
 | Promotion Campaigns | Voucher logic may be extended by marketing campaigns. |
-| Loyalty Program | Voucher eligibility may depend on loyalty level. |
+| Loyalty Program     | Voucher eligibility may depend on loyalty level.      |
 
 ### 11. Special Requirements
 
@@ -1169,19 +1169,19 @@ Customer
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
+| Scenario                  | Description                                             |
+| :------------------------ | :------------------------------------------------------ |
 | Successful Online Payment | Customer completes payment and order is marked as paid. |
-| Failed Payment | Gateway reports failed payment. |
-| Canceled Payment | Customer cancels before completion. |
-| Pending Verification | Customer returns before webhook confirmation. |
+| Failed Payment            | Gateway reports failed payment.                         |
+| Canceled Payment          | Customer cancels before completion.                     |
+| Pending Verification      | Customer returns before webhook confirmation.           |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Multiple Payment Gateways | The system may support multiple gateway adapters. |
-| Refund Processing | The system may support refund requests and refund status tracking. |
+| Extension Point           | Description                                                        |
+| :------------------------ | :----------------------------------------------------------------- |
+| Multiple Payment Gateways | The system may support multiple gateway adapters.                  |
+| Refund Processing         | The system may support refund requests and refund status tracking. |
 
 ### 11. Special Requirements
 
@@ -1272,19 +1272,19 @@ Customer
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| View Order History | Customer views all personal orders. |
-| View Order Detail | Customer checks order items and status. |
-| Cancel Pending Order | Customer cancels an order before fulfillment. |
-| Unauthorized Access | Customer attempts to access another customer's order. |
+| Scenario             | Description                                           |
+| :------------------- | :---------------------------------------------------- |
+| View Order History   | Customer views all personal orders.                   |
+| View Order Detail    | Customer checks order items and status.               |
+| Cancel Pending Order | Customer cancels an order before fulfillment.         |
+| Unauthorized Access  | Customer attempts to access another customer's order. |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Return Request | Customer may request product return after delivery. |
-| Refund Request | Customer may request refund if eligible. |
+| Extension Point   | Description                                           |
+| :---------------- | :---------------------------------------------------- |
+| Return Request    | Customer may request product return after delivery.   |
+| Refund Request    | Customer may request refund if eligible.              |
 | Delivery Tracking | System may integrate with shipping provider tracking. |
 
 ### 11. Special Requirements
@@ -1377,19 +1377,19 @@ Admin
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| Create Product | Admin creates a new product. |
-| Update Product | Admin edits existing product data. |
+| Scenario           | Description                                                                        |
+| :----------------- | :--------------------------------------------------------------------------------- |
+| Create Product     | Admin creates a new product.                                                       |
+| Update Product     | Admin edits existing product data.                                                 |
 | Deactivate Product | Admin removes product from public storefront without losing historical order data. |
-| Invalid Product | Admin submits invalid product data. |
+| Invalid Product    | Admin submits invalid product data.                                                |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
+| Extension Point  | Description                                              |
+| :--------------- | :------------------------------------------------------- |
 | Product Approval | Product changes may require approval before publication. |
-| Bulk Import | Admin may import products from CSV or spreadsheet. |
+| Bulk Import      | Admin may import products from CSV or spreadsheet.       |
 
 ### 11. Special Requirements
 
@@ -1484,18 +1484,18 @@ Admin
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| Update Stock | Admin updates stock for a product. |
+| Scenario               | Description                                                |
+| :--------------------- | :--------------------------------------------------------- |
+| Update Stock           | Admin updates stock for a product.                         |
 | Prevent Negative Stock | System rejects stock update that causes negative quantity. |
-| Concurrent Update | System handles simultaneous inventory changes safely. |
-| Stock Audit | System records inventory adjustment details. |
+| Concurrent Update      | System handles simultaneous inventory changes safely.      |
+| Stock Audit            | System records inventory adjustment details.               |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Low-stock Alert | System may notify admin when stock is below threshold. |
+| Extension Point  | Description                                             |
+| :--------------- | :------------------------------------------------------ |
+| Low-stock Alert  | System may notify admin when stock is below threshold.  |
 | Inventory Import | Admin may import inventory updates from external files. |
 
 ### 11. Special Requirements
@@ -1595,21 +1595,21 @@ Admin
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
+| Scenario      | Description                                     |
+| :------------ | :---------------------------------------------- |
 | Process Order | Admin updates order from Pending to Processing. |
-| Ship Order | Admin updates order from Processing to Shipped. |
-| Deliver Order | Admin updates order from Shipped to Delivered. |
-| Cancel Order | Admin cancels an eligible order. |
-| Refund Order | Admin refunds an eligible order. |
+| Ship Order    | Admin updates order from Processing to Shipped. |
+| Deliver Order | Admin updates order from Shipped to Delivered.  |
+| Cancel Order  | Admin cancels an eligible order.                |
+| Refund Order  | Admin refunds an eligible order.                |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Shipping Integration | Status update may trigger delivery provider integration. |
-| Customer Notification | Status update may trigger email or in-app notification. |
-| Refund Gateway | Refund processing may connect with payment gateway APIs. |
+| Extension Point       | Description                                              |
+| :-------------------- | :------------------------------------------------------- |
+| Shipping Integration  | Status update may trigger delivery provider integration. |
+| Customer Notification | Status update may trigger email or in-app notification.  |
+| Refund Gateway        | Refund processing may connect with payment gateway APIs. |
 
 ### 11. Special Requirements
 
@@ -1697,19 +1697,19 @@ Admin
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| View Customer List | Admin reviews all customers. |
-| Search Customer | Admin searches for a customer by keyword. |
-| View Customer Detail | Admin views customer profile and order summary. |
+| Scenario               | Description                                         |
+| :--------------------- | :-------------------------------------------------- |
+| View Customer List     | Admin reviews all customers.                        |
+| Search Customer        | Admin searches for a customer by keyword.           |
+| View Customer Detail   | Admin views customer profile and order summary.     |
 | Update Customer Status | Admin updates customer account status if supported. |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Customer Segmentation | Admin may group customers by purchase history or loyalty level. |
-| Customer Support Notes | Admin may add internal notes for support purposes. |
+| Extension Point        | Description                                                     |
+| :--------------------- | :-------------------------------------------------------------- |
+| Customer Segmentation  | Admin may group customers by purchase history or loyalty level. |
+| Customer Support Notes | Admin may add internal notes for support purposes.              |
 
 ### 11. Special Requirements
 
@@ -1804,18 +1804,18 @@ Admin
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| Approve Product | Admin approves a valid product for storefront visibility. |
-| Reject Product | Admin rejects an invalid or unsuitable product. |
+| Scenario         | Description                                                  |
+| :--------------- | :----------------------------------------------------------- |
+| Approve Product  | Admin approves a valid product for storefront visibility.    |
+| Reject Product   | Admin rejects an invalid or unsuitable product.              |
 | Already Reviewed | Admin attempts to review a product whose status has changed. |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Review Comments | Admin may add approval or rejection comments. |
-| Notification | Product owner or internal team may be notified of approval result. |
+| Extension Point | Description                                                        |
+| :-------------- | :----------------------------------------------------------------- |
+| Review Comments | Admin may add approval or rejection comments.                      |
+| Notification    | Product owner or internal team may be notified of approval result. |
 
 ### 11. Special Requirements
 
@@ -1904,17 +1904,17 @@ Admin
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| View Dashboard | Admin views current business metrics. |
-| Filter by Date | Admin filters revenue and orders by date range. |
-| Empty Metrics | Dashboard displays empty state when there is no data. |
+| Scenario       | Description                                           |
+| :------------- | :---------------------------------------------------- |
+| View Dashboard | Admin views current business metrics.                 |
+| Filter by Date | Admin filters revenue and orders by date range.       |
+| Empty Metrics  | Dashboard displays empty state when there is no data. |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
-| Export Report | Admin may export dashboard data as CSV or PDF. |
+| Extension Point    | Description                                                                                    |
+| :----------------- | :--------------------------------------------------------------------------------------------- |
+| Export Report      | Admin may export dashboard data as CSV or PDF.                                                 |
 | Advanced Analytics | System may display charts for conversion rate, average order value, and best-selling products. |
 
 ### 11. Special Requirements
@@ -2035,20 +2035,20 @@ Payment Gateway
 
 ### 9. Key Scenarios
 
-| Scenario | Description |
-| :--- | :--- |
-| Successful Payment Webhook | Gateway confirms payment success and order becomes paid. |
-| Failed Payment Webhook | Gateway reports failed payment and payment status is updated. |
-| Duplicate Webhook | Gateway retries a webhook that has already been processed. |
-| Invalid Webhook | System rejects a webhook with invalid signature. |
-| Refund Webhook | Gateway confirms refund and system updates payment/order status. |
+| Scenario                   | Description                                                      |
+| :------------------------- | :--------------------------------------------------------------- |
+| Successful Payment Webhook | Gateway confirms payment success and order becomes paid.         |
+| Failed Payment Webhook     | Gateway reports failed payment and payment status is updated.    |
+| Duplicate Webhook          | Gateway retries a webhook that has already been processed.       |
+| Invalid Webhook            | System rejects a webhook with invalid signature.                 |
+| Refund Webhook             | Gateway confirms refund and system updates payment/order status. |
 
 ### 10. Extension Points
 
-| Extension Point | Description |
-| :--- | :--- |
+| Extension Point       | Description                                                                |
+| :-------------------- | :------------------------------------------------------------------------- |
 | Multi-gateway Adapter | Different gateways may have separate verification and event parsing logic. |
-| Fraud Detection | Suspicious payment events may trigger fraud review. |
+| Fraud Detection       | Suspicious payment events may trigger fraud review.                        |
 
 ### 11. Special Requirements
 
@@ -2066,27 +2066,27 @@ This use case is essential for secure and reliable online payment processing.
 
 # 6. Use-Case Priority Matrix
 
-| Priority | Use Cases |
-| :--- | :--- |
-| High | UC-01, UC-02, UC-03, UC-04, UC-05, UC-06, UC-07, UC-09, UC-10, UC-11, UC-12, UC-13, UC-17 |
-| Medium | UC-08, UC-14, UC-15, UC-16 |
-| Low | None in current project scope |
+| Priority | Use Cases                                                                                 |
+| :------- | :---------------------------------------------------------------------------------------- |
+| High     | UC-01, UC-02, UC-03, UC-04, UC-05, UC-06, UC-07, UC-09, UC-10, UC-11, UC-12, UC-13, UC-17 |
+| Medium   | UC-08, UC-14, UC-15, UC-16                                                                |
+| Low      | None in current project scope                                                             |
 
 ---
 
 # 7. Traceability to Core Features
 
-| Core Feature | Related Use Cases |
-| :--- | :--- |
-| Authentication & Profile | UC-01, UC-02, UC-03 |
-| Product Catalog & Search | UC-04, UC-05 |
-| Shopping Cart | UC-06 |
-| Checkout | UC-07, UC-08, UC-09 |
-| Order Management | UC-10, UC-13 |
-| Product & Inventory Management | UC-11, UC-12, UC-15 |
-| Payment Gateway Integration | UC-09, UC-17 |
-| Admin Dashboard & CMS | UC-11, UC-12, UC-13, UC-14, UC-15, UC-16 |
-| End-to-End Testing | All customer and admin workflows should have Playwright E2E coverage |
+| Core Feature                   | Related Use Cases                                                    |
+| :----------------------------- | :------------------------------------------------------------------- |
+| Authentication & Profile       | UC-01, UC-02, UC-03                                                  |
+| Product Catalog & Search       | UC-04, UC-05                                                         |
+| Shopping Cart                  | UC-06                                                                |
+| Checkout                       | UC-07, UC-08, UC-09                                                  |
+| Order Management               | UC-10, UC-13                                                         |
+| Product & Inventory Management | UC-11, UC-12, UC-15                                                  |
+| Payment Gateway Integration    | UC-09, UC-17                                                         |
+| Admin Dashboard & CMS          | UC-11, UC-12, UC-13, UC-14, UC-15, UC-16                             |
+| End-to-End Testing             | All customer and admin workflows should have Playwright E2E coverage |
 
 ---
 
@@ -2094,25 +2094,25 @@ This use case is essential for secure and reliable online payment processing.
 
 ## 8.1 Suggested Playwright E2E Test Coverage
 
-| Test ID | Workflow | Related Use Case |
-| :--- | :--- | :--- |
-| E2E-001 | Register with valid information | UC-01 |
-| E2E-002 | Reject duplicate email registration | UC-01 |
-| E2E-003 | Sign in as customer | UC-02 |
-| E2E-004 | Sign in as admin | UC-02 |
-| E2E-005 | Customer updates profile | UC-03 |
-| E2E-006 | Search and filter products | UC-04 |
-| E2E-007 | View product details | UC-05 |
-| E2E-008 | Add, update, and remove cart item | UC-06 |
-| E2E-009 | Checkout with valid cart | UC-07 |
-| E2E-010 | Apply valid and invalid voucher | UC-08 |
-| E2E-011 | Complete payment flow with mocked gateway | UC-09 |
-| E2E-012 | View order history and detail | UC-10 |
-| E2E-013 | Admin creates and updates product | UC-11 |
-| E2E-014 | Admin updates inventory | UC-12 |
-| E2E-015 | Admin updates order lifecycle | UC-13 |
-| E2E-016 | Admin views dashboard metrics | UC-16 |
-| E2E-017 | Process payment webhook idempotently | UC-17 |
+| Test ID | Workflow                                  | Related Use Case |
+| :------ | :---------------------------------------- | :--------------- |
+| E2E-001 | Register with valid information           | UC-01            |
+| E2E-002 | Reject duplicate email registration       | UC-01            |
+| E2E-003 | Sign in as customer                       | UC-02            |
+| E2E-004 | Sign in as admin                          | UC-02            |
+| E2E-005 | Customer updates profile                  | UC-03            |
+| E2E-006 | Search and filter products                | UC-04            |
+| E2E-007 | View product details                      | UC-05            |
+| E2E-008 | Add, update, and remove cart item         | UC-06            |
+| E2E-009 | Checkout with valid cart                  | UC-07            |
+| E2E-010 | Apply valid and invalid voucher           | UC-08            |
+| E2E-011 | Complete payment flow with mocked gateway | UC-09            |
+| E2E-012 | View order history and detail             | UC-10            |
+| E2E-013 | Admin creates and updates product         | UC-11            |
+| E2E-014 | Admin updates inventory                   | UC-12            |
+| E2E-015 | Admin updates order lifecycle             | UC-13            |
+| E2E-016 | Admin views dashboard metrics             | UC-16            |
+| E2E-017 | Process payment webhook idempotently      | UC-17            |
 
 ## 8.2 Order Lifecycle
 

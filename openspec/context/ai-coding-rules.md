@@ -25,6 +25,7 @@
 The AI agent MUST create small atomic commits.
 
 Rules:
+
 - After each completed logical change, create a git commit before starting the next logical change.
 - A logical change means one focused unit of work, such as:
   - create/update OpenSpec proposal files

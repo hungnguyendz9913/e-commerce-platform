@@ -32,12 +32,6 @@ type ProductClient = DatabaseService | ProductTransaction;
 export class ProductsRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  runInTransaction<T>(
-    callback: (transaction: ProductTransaction) => Promise<T>,
-  ) {
-    return this.databaseService.$transaction(callback);
-  }
-
   async listProducts(
     where: Prisma.ProductWhereInput,
     orderBy: Prisma.ProductOrderByWithRelationInput,

@@ -14,14 +14,14 @@ To address this, the project focuses on developing a modern online shopping plat
 
 I chose this project to practice and improve my skills in each area of the software development lifecycle:
 
-| Part | Skills |
-| :--- | :--- |
+| Part     | Skills                                                     |
+| :------- | :--------------------------------------------------------- |
 | Frontend | Responsive design, component architecture, API integration |
-| Backend | REST APIs, authentication, business logic |
-| Database | Schema design, query optimization |
-| Testing | End-to-end testing with Playwright |
-| DevOps | CI/CD, deployment, Docker |
-| Monorepo | Nx workspace management |
+| Backend  | REST APIs, authentication, business logic                  |
+| Database | Schema design, query optimization                          |
+| Testing  | End-to-end testing with Playwright                         |
+| DevOps   | CI/CD, deployment, Docker                                  |
+| Monorepo | Nx workspace management                                    |
 
 ## System Architecture
 

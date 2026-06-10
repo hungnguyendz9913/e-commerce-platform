@@ -40,16 +40,16 @@ describe('UserRoleService', () => {
     });
 
     await expect(
-      service.assignRoleToUser('user-id', Roles.CUSTOMER)
+      service.assignRoleToUser('user-id', Roles.CUSTOMER),
     ).resolves.toEqual({
       role: { name: Roles.CUSTOMER },
     });
     expect(userRoleRepository.findOrCreateRole).toHaveBeenCalledWith(
-      Roles.CUSTOMER
+      Roles.CUSTOMER,
     );
     expect(userRoleRepository.assignRoleToUser).toHaveBeenCalledWith(
       'user-id',
-      'role-id'
+      'role-id',
     );
   });
 });

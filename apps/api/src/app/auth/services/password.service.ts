@@ -24,7 +24,7 @@ export class PasswordService {
     const actualKey = (await scryptAsync(
       password,
       salt,
-      expectedKey.length
+      expectedKey.length,
     )) as Buffer;
 
     return (

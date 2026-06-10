@@ -1,3 +1,4 @@
-export * from "./database/database.module.js";
-export * from "./database/database.service.js";
-export * from "./generated/client.js";
+export * from './database/database.module.js';
+export * from './database/database.service.js';
+export * from './database/transaction.service.js';
+export * from './generated/client.js';

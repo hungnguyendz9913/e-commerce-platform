@@ -7,6 +7,7 @@ This change implements admin product CRUD through protected `/admin/products` en
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Add admin product list, detail, create, update, and delete/archive endpoints guarded by admin RBAC.
 - Validate product payloads before persistence, including category existence, unique SKU/slug, enum values, image shape, price, and inventory quantities.
 - Persist product, images, and inventory updates consistently in database transactions.
@@ -14,6 +15,7 @@ This change implements admin product CRUD through protected `/admin/products` en
 - Keep public product listing/detail visibility restricted to active and approved products.
 
 **Non-Goals:**
+
 - Build admin web UI screens for product management.
 - Add bulk import/export, advanced merchandising, variants, multi-category assignment, or product approval workflows beyond status fields.
 - Redesign the Prisma schema unless implementation reveals a missing required field.

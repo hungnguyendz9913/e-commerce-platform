@@ -61,9 +61,9 @@ describe('AdminProductsController', () => {
     await expect(controller.getProduct('p1')).resolves.toEqual({
       data: { id: 'p1' },
     });
-    await expect(controller.updateProduct('p1', { name: 'Updated' })).resolves.toEqual(
-      { data: { id: 'p1' } },
-    );
+    await expect(
+      controller.updateProduct('p1', { name: 'Updated' }),
+    ).resolves.toEqual({ data: { id: 'p1' } });
     await expect(controller.deleteProduct('p1')).resolves.toEqual({
       data: { deleted: true, archived: false, id: 'p1' },
     });
