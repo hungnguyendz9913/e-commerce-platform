@@ -1,4 +1,4 @@
-import { DatabaseService } from '@e-commerce-platform/database';
+import { DatabaseService, DbClient, Prisma } from '@e-commerce-platform/database';
 import type { CreateUserDto, RoleName } from '@e-commerce-platform/types';
 import { Injectable } from '@nestjs/common';
 
@@ -61,8 +61,8 @@ export class UserRepository {
     });
   }
 
-  async findCurrentUserById(id: string) {
-    return this.databaseService.user.findUnique({
+  async findCurrentUserById(id: string, client: DbClient = this.databaseService) {
+    return client.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -160,6 +160,13 @@ export class UserRepository {
         ...user,
         role: role.name,
       };
+    });
+  }
+
+  async updateProfile(id: string, data: Prisma.UserUpdateArgs['data']) {
+    return this.databaseService.user.update({
+      where: {id},
+      data,
     });
   }
 }

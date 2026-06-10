@@ -3,9 +3,12 @@ import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
 import {
   ConflictException,
   Injectable,
+  BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserRepository } from './user.repository';
+import { UpdateProfileDto } from '@e-commerce-platform/api-contracts';
+import { Prisma } from '@e-commerce-platform/database';
 
 @Injectable()
 export class UserService {
@@ -91,5 +94,19 @@ export class UserService {
 
   updatePassword(userId: string, passwordHash: string) {
     return this.userRepository.updatePassword(userId, passwordHash);
+  }
+
+  async updateProfile(id: string, updateProfileDto: UpdateProfileDto) {
+    const data: Prisma.UserUpdateArgs['data'] = {
+      fullName: updateProfileDto.fullName ?? undefined,
+      phone: updateProfileDto.phone ?? undefined,
+      avatarUrl: updateProfileDto.avatarUrl ?? undefined,
+    };
+
+    if (Object.values(data).every((value) => value === undefined)) {
+      throw new BadRequestException('No profile fields provided for update');
+    }
+
+    return this.userRepository.updateProfile(id, data);
   }
 }
