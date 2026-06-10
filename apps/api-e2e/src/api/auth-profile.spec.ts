@@ -1,58 +1,43 @@
-import { UnauthorizedException, ValidationPipe } from '@nestjs/common';
-import type {
-  CanActivate,
-  ExecutionContext,
-  INestApplication,
-} from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import axios, { AxiosInstance } from 'axios';
+/* eslint-disable @nx/enforce-module-boundaries */
+import type { INestApplication } from '@nestjs/common';
+import type { APIRequestContext } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { Roles } from '@e-commerce-platform/types';
 import { AuthController } from '../../../api/src/app/auth/auth.controller';
-import type { RequestWithUser } from '../../../api/src/app/auth/authenticated-user';
 import { JwtAuthGuard } from '../../../api/src/app/auth/guards/jwt-auth.guard';
 import { AuthService } from '../../../api/src/app/auth/services/auth.service';
 import { UserController } from '../../../api/src/app/user/user.controller';
 import { UserService } from '../../../api/src/app/user/user.service';
+import {
+  closeApiTestResources,
+  createApiContext,
+  createApiTestApp,
+  createMockFunction,
+  createTokenAuthGuard,
+} from '../support/api-test-app';
 
 const passwordResetMessage =
   'If the email exists, password reset instructions have been generated.';
 
-describe('Auth and profile API baseline', () => {
+test.describe('Auth and profile API baseline', () => {
   let app: INestApplication;
-  let client: AxiosInstance;
+  let api: APIRequestContext;
 
   const authService = {
-    register: jest.fn(),
-    login: jest.fn(),
-    meAuthenticated: jest.fn(),
-    forgotPassword: jest.fn(),
-    refresh: jest.fn(),
-    logoutAuthenticated: jest.fn(),
-    resetPassword: jest.fn(),
+    register: createMockFunction(),
+    login: createMockFunction(),
+    meAuthenticated: createMockFunction(),
+    forgotPassword: createMockFunction(),
+    refresh: createMockFunction(),
+    logoutAuthenticated: createMockFunction(),
+    resetPassword: createMockFunction(),
   };
   const userService = {
-    getCurrentUserProfile: jest.fn(),
-  };
-  const authGuard: CanActivate = {
-    canActivate: (context: ExecutionContext) => {
-      const request = context.switchToHttp().getRequest<RequestWithUser>();
-
-      if (request.headers.authorization !== 'Bearer valid-token') {
-        throw new UnauthorizedException('Invalid or expired session');
-      }
-
-      request.user = {
-        userId: 'user-id',
-        sessionId: 'session-id',
-        roles: [Roles.CUSTOMER],
-      };
-
-      return true;
-    },
+    getCurrentUserProfile: createMockFunction(),
   };
 
-  beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
+  test.beforeAll(async () => {
+    app = await createApiTestApp({
       controllers: [AuthController, UserController],
       providers: [
         {
@@ -64,37 +49,30 @@ describe('Auth and profile API baseline', () => {
           useValue: userService,
         },
       ],
-    })
-      .overrideGuard(JwtAuthGuard)
-      .useValue(authGuard)
-      .compile();
-
-    app = moduleRef.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    app.setGlobalPrefix('api');
-    await app.listen(0);
-
-    client = axios.create({
-      baseURL: await app.getUrl(),
-      validateStatus: () => true,
+      overrideGuards: [
+        {
+          guard: JwtAuthGuard,
+          value: createTokenAuthGuard(),
+        },
+      ],
     });
+    api = await createApiContext(app);
   });
 
-  beforeEach(() => {
-    jest.resetAllMocks();
+  test.beforeEach(() => {
+    for (const mock of [
+      ...Object.values(authService),
+      ...Object.values(userService),
+    ]) {
+      mock.reset();
+    }
   });
 
-  afterAll(async () => {
-    await app.close();
+  test.afterAll(async () => {
+    await closeApiTestResources(app, api);
   });
 
-  it('should register a customer account', async () => {
+  test('should register a customer account', async () => {
     authService.register.mockResolvedValue({
       data: {
         id: 'user-id',
@@ -106,15 +84,18 @@ describe('Auth and profile API baseline', () => {
       },
     });
 
-    const response = await client.post('/api/auth/register', {
-      email: 'customer@example.com',
-      password: 'Password123',
-      confirmPassword: 'Password123',
-      fullName: 'Nguyen Van A',
+    const response = await api.post('/api/auth/register', {
+      data: {
+        email: 'customer@example.com',
+        password: 'Password123',
+        confirmPassword: 'Password123',
+        fullName: 'Nguyen Van A',
+      },
     });
+    const body = await response.json();
 
-    expect(response.status).toBe(201);
-    expect(response.data).toEqual({
+    expect(response.status()).toBe(201);
+    expect(body).toEqual({
       data: {
         id: 'user-id',
         email: 'customer@example.com',
@@ -124,11 +105,11 @@ describe('Auth and profile API baseline', () => {
         createdAt: '2026-06-08T10:00:00.000Z',
       },
     });
-    expect(response.data.data).not.toHaveProperty('password');
-    expect(response.data.data).not.toHaveProperty('passwordHash');
+    expect(body.data).not.toHaveProperty('password');
+    expect(body.data).not.toHaveProperty('passwordHash');
   });
 
-  it('should login and return identity with roles', async () => {
+  test('should login and return identity with roles', async () => {
     authService.login.mockResolvedValue({
       data: {
         accessToken: 'access-token',
@@ -142,22 +123,25 @@ describe('Auth and profile API baseline', () => {
       },
     });
 
-    const response = await client.post('/api/auth/login', {
-      email: 'customer@example.com',
-      password: 'Password123',
+    const response = await api.post('/api/auth/login', {
+      data: {
+        email: 'customer@example.com',
+        password: 'Password123',
+      },
     });
+    const body = await response.json();
 
-    expect(response.status).toBe(201);
-    expect(response.data.data.user.roles).toEqual([Roles.CUSTOMER]);
+    expect(response.status()).toBe(201);
+    expect(body.data.user.roles).toEqual([Roles.CUSTOMER]);
   });
 
-  it('should require auth for auth me', async () => {
-    const response = await client.get('/api/auth/me');
+  test('should require auth for auth me', async () => {
+    const response = await api.get('/api/auth/me');
 
-    expect(response.status).toBe(401);
+    expect(response.status()).toBe(401);
   });
 
-  it('should return authenticated identity and roles from auth me', async () => {
+  test('should return authenticated identity and roles from auth me', async () => {
     authService.meAuthenticated.mockResolvedValue({
       data: {
         id: 'user-id',
@@ -169,26 +153,31 @@ describe('Auth and profile API baseline', () => {
       },
     });
 
-    const response = await client.get('/api/auth/me', {
+    const response = await api.get('/api/auth/me', {
       headers: { Authorization: 'Bearer valid-token' },
     });
+    const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(response.data.data.roles).toEqual([Roles.CUSTOMER]);
-    expect(authService.meAuthenticated).toHaveBeenCalledWith({
-      userId: 'user-id',
-      sessionId: 'session-id',
-      roles: [Roles.CUSTOMER],
-    });
+    expect(response.status()).toBe(200);
+    expect(body.data.roles).toEqual([Roles.CUSTOMER]);
+    expect(authService.meAuthenticated.calls).toEqual([
+      [
+        {
+          userId: 'user-id',
+          sessionId: 'session-id',
+          roles: [Roles.CUSTOMER],
+        },
+      ],
+    ]);
   });
 
-  it('should require auth for users me', async () => {
-    const response = await client.get('/api/users/me');
+  test('should require auth for users me', async () => {
+    const response = await api.get('/api/users/me');
 
-    expect(response.status).toBe(401);
+    expect(response.status()).toBe(401);
   });
 
-  it('should return the current authenticated profile from users me', async () => {
+  test('should return the current authenticated profile from users me', async () => {
     userService.getCurrentUserProfile.mockResolvedValue({
       data: {
         id: 'user-id',
@@ -200,32 +189,36 @@ describe('Auth and profile API baseline', () => {
       },
     });
 
-    const response = await client.get('/api/users/me', {
+    const response = await api.get('/api/users/me', {
       headers: { Authorization: 'Bearer valid-token' },
     });
+    const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(response.data.data.id).toBe('user-id');
-    expect(userService.getCurrentUserProfile).toHaveBeenCalledWith('user-id');
+    expect(response.status()).toBe(200);
+    expect(body.data.id).toBe('user-id');
+    expect(userService.getCurrentUserProfile.calls).toEqual([['user-id']]);
   });
 
-  it('should return a generic forgot-password response for an unknown email', async () => {
+  test('should return a generic forgot-password response for an unknown email', async () => {
     authService.forgotPassword.mockResolvedValue({
       data: {
         message: passwordResetMessage,
       },
     });
 
-    const response = await client.post('/api/auth/forgot-password', {
-      email: 'missing@example.com',
+    const response = await api.post('/api/auth/forgot-password', {
+      data: {
+        email: 'missing@example.com',
+      },
     });
+    const body = await response.json();
 
-    expect(response.status).toBe(201);
-    expect(response.data).toEqual({
+    expect(response.status()).toBe(201);
+    expect(body).toEqual({
       data: {
         message: passwordResetMessage,
       },
     });
-    expect(response.data.data).not.toHaveProperty('resetToken');
+    expect(body.data).not.toHaveProperty('resetToken');
   });
 });

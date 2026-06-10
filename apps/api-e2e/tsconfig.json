@@ -3,11 +3,20 @@
   "compilerOptions": {
     "outDir": "out-tsc/@e-commerce-platform/api-e2e",
     "esModuleInterop": true,
+    "types": ["node"],
     "noUnusedLocals": false,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
-  "include": ["jest.config.ts", "src/**/*.ts"],
+  "include": ["jest.config.cts", "playwright.config.ts", "src/**/*.ts"],
   "references": [
+    {
+      "path": "../../libs/api/common"
+    },
+    {
+      "path": "../../libs/api/contracts"
+    },
     {
       "path": "../api"
     },
