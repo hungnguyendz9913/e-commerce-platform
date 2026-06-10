@@ -21,10 +21,11 @@ import {
   ProductWithRelations,
   ProductsRepository,
 } from './products.repository';
+import { TransactionService } from '@e-commerce-platform/database';
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly productsRepository: ProductsRepository) {}
+  constructor(private readonly productsRepository: ProductsRepository, private readonly transactionService: TransactionService) {}
 
   async listAdminProducts(query: ListProductsQueryDto) {
     const page = query.page ?? 1;
@@ -100,7 +101,7 @@ export class ProductsService {
 
   async createProduct(createProductDto: CreateProductDto) {
     try {
-      const product = await this.productsRepository.runInTransaction(
+      const product = await this.transactionService.run(
         async (transaction) => {
           await this.assertActiveCategory(
             transaction,
@@ -112,8 +113,7 @@ export class ProductsService {
             createProductDto.slug,
           );
 
-          const stockQuantity =
-            createProductDto.inventory?.stockQuantity ?? 0;
+          const stockQuantity = createProductDto.inventory?.stockQuantity ?? 0;
           const reservedQuantity =
             createProductDto.inventory?.reservedQuantity ?? 0;
           this.assertInventoryValues({ stockQuantity, reservedQuantity });
@@ -140,17 +140,14 @@ export class ProductsService {
           );
 
           if (stockQuantity > 0) {
-            await this.productsRepository.createInventoryMovement(
-              transaction,
-              {
-                productId: createdProduct.id,
-                movementType: 'IMPORT',
-                quantity: stockQuantity,
-                beforeQuantity: 0,
-                afterQuantity: stockQuantity,
-                reason: 'Initial product stock',
-              },
-            );
+            await this.productsRepository.createInventoryMovement(transaction, {
+              productId: createdProduct.id,
+              movementType: 'IMPORT',
+              quantity: stockQuantity,
+              beforeQuantity: 0,
+              afterQuantity: stockQuantity,
+              reason: 'Initial product stock',
+            });
           }
 
           return createdProduct;
@@ -168,13 +165,10 @@ export class ProductsService {
 
   async updateProduct(id: string, updateProductDto: UpdateProductDto) {
     try {
-      const product = await this.productsRepository.runInTransaction(
+      const product = await this.transactionService.run(
         async (transaction) => {
           const existingProduct =
-            await this.productsRepository.findProductForUpdate(
-              transaction,
-              id,
-            );
+            await this.productsRepository.findProductForUpdate(transaction, id);
 
           if (!existingProduct) {
             throw new NotFoundException('Product not found');
@@ -237,19 +231,16 @@ export class ProductsService {
             inventoryData.previousStockQuantity !==
               inventoryData.next.stockQuantity
           ) {
-            await this.productsRepository.createInventoryMovement(
-              transaction,
-              {
-                productId: id,
-                movementType: 'ADJUSTMENT',
-                quantity:
-                  inventoryData.next.stockQuantity -
-                  inventoryData.previousStockQuantity,
-                beforeQuantity: inventoryData.previousStockQuantity,
-                afterQuantity: inventoryData.next.stockQuantity,
-                reason: 'Admin product inventory update',
-              },
-            );
+            await this.productsRepository.createInventoryMovement(transaction, {
+              productId: id,
+              movementType: 'ADJUSTMENT',
+              quantity:
+                inventoryData.next.stockQuantity -
+                inventoryData.previousStockQuantity,
+              beforeQuantity: inventoryData.previousStockQuantity,
+              afterQuantity: inventoryData.next.stockQuantity,
+              reason: 'Admin product inventory update',
+            });
           }
 
           return updatedProduct;
@@ -387,11 +378,12 @@ export class ProductsService {
       return;
     }
 
-    const existingProduct = await this.productsRepository.findProductBySkuOrSlug(
-      transaction,
-      conditions,
-      excludedProductId,
-    );
+    const existingProduct =
+      await this.productsRepository.findProductBySkuOrSlug(
+        transaction,
+        conditions,
+        excludedProductId,
+      );
 
     if (!existingProduct) {
       return;

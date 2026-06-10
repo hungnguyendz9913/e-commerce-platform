@@ -1,8 +1,8 @@
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import {
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
-import { DatabaseService } from '@e-commerce-platform/database';
+  DatabaseService,
+  TransactionService,
+} from '@e-commerce-platform/database';
 import { ProductsRepository } from './products.repository';
 import { ProductsService } from './products.service';
 
@@ -99,7 +99,10 @@ function createDatabaseMock() {
 }
 
 function createService(databaseService: DatabaseService) {
-  return new ProductsService(new ProductsRepository(databaseService));
+  return new ProductsService(
+    new ProductsRepository(databaseService),
+    new TransactionService(databaseService),
+  );
 }
 
 describe('ProductsService', () => {

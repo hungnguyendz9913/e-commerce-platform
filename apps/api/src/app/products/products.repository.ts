@@ -98,10 +98,7 @@ export class ProductsRepository {
     });
   }
 
-  createProduct(
-    client: ProductClient,
-    data: Prisma.ProductCreateArgs['data'],
-  ) {
+  createProduct(client: ProductClient, data: Prisma.ProductCreateArgs['data']) {
     return client.product.create({
       data,
       include: productInclude,
