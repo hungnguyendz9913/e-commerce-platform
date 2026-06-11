@@ -12,3 +12,5 @@ export * from './lib/products/update-product.dto.js';
 export * from './lib/products/validators.js';
 export * from './lib/users/update-profile.dto.js';
 export * from './lib/addresses/create-address.dto.js';
+export * from './lib/categories/create-category.dto.js';
+export * from './lib/categories/update-category.dto.js';
