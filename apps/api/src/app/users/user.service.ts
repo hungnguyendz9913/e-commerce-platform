@@ -7,12 +7,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserRepository } from './user.repository';
-import { UpdateProfileDto } from '@e-commerce-platform/api-contracts';
+import { CreateMyAddressDto, UpdateProfileDto } from '@e-commerce-platform/api-contracts';
 import { Prisma } from '@e-commerce-platform/database';
+import { AddressRepository } from '../addresses/address.repository';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(private readonly userRepository: UserRepository, private readonly addressRepository: AddressRepository) {}
 
   async createUser(createUserDto: CreateUserDto) {
     const existingUser = await this.userRepository.findUserByEmail(
@@ -108,5 +109,13 @@ export class UserService {
     }
 
     return this.userRepository.updateProfile(id, data);
+  }
+
+  async getMyAddresses(id: string) {
+    return this.addressRepository.getAddressesByUserId(id);
+  }
+
+  async createMyAddress(id: string, createMyAddressDto: CreateMyAddressDto) {
+    return this.addressRepository.createMyAddress(id, createMyAddressDto);
   }
 }

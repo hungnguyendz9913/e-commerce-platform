@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   CurrentUser,
   type AuthenticatedUser,
 } from '@e-commerce-platform/api-common';
-import { UpdateProfileDto } from '@e-commerce-platform/api-contracts';
+import { CreateMyAddressDto, UpdateProfileDto } from '@e-commerce-platform/api-contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserService } from './user.service';
 
@@ -24,5 +24,17 @@ export class UserController {
     @Body() updateProfileDto: UpdateProfileDto,
   ) {
     return this.userService.updateProfile(user.userId, updateProfileDto);
+  }
+
+  @Get('me/addresses')
+  @UseGuards(JwtAuthGuard)
+  getMyAddresses(@CurrentUser() user: AuthenticatedUser) {
+    return this.userService.getMyAddresses(user.userId);
+  }
+
+  @Post('me/addresses')
+  @UseGuards(JwtAuthGuard)
+  createMyAddress(@CurrentUser() user: AuthenticatedUser, @Body() createMyAddressDto: CreateMyAddressDto) {
+    return this.userService.createMyAddress(user.userId, createMyAddressDto);
   }
 }
