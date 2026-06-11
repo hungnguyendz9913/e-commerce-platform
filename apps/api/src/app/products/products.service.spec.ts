@@ -5,6 +5,7 @@ import {
 } from '@e-commerce-platform/database';
 import { ProductsRepository } from './products.repository';
 import { ProductsService } from './products.service';
+import { InventoryService } from '../inventory/inventory.service';
 
 const createdAt = new Date('2026-06-09T01:00:00.000Z');
 const updatedAt = new Date('2026-06-09T02:00:00.000Z');
@@ -57,12 +58,9 @@ function createDatabaseMock() {
     },
     product: {
       findFirst: jest.fn(),
-      findUnique: jest.fn(),
+      findUnique: jest.fn().mockResolvedValue(productFixture()),
       create: jest.fn().mockResolvedValue(productFixture()),
       update: jest.fn().mockResolvedValue(productFixture()),
-    },
-    inventoryMovement: {
-      create: jest.fn(),
     },
   };
   const databaseService = {
@@ -98,7 +96,20 @@ function createDatabaseMock() {
   };
 }
 
-function createService(databaseService: DatabaseService, transaction: unknown) {
+function createInventoryServiceMock() {
+  return {
+    initializeProductInventory: jest.fn().mockResolvedValue(undefined),
+    updateProductInventoryFromAdminProduct: jest
+      .fn()
+      .mockResolvedValue(undefined),
+  };
+}
+
+function createService(
+  databaseService: DatabaseService,
+  transaction: unknown,
+  inventoryService = createInventoryServiceMock(),
+) {
   const transactionService = {
     run: jest.fn((callback) => callback(transaction)),
   };
@@ -107,8 +118,10 @@ function createService(databaseService: DatabaseService, transaction: unknown) {
     service: new ProductsService(
       new ProductsRepository(databaseService),
       transactionService as unknown as TransactionService,
+      inventoryService as unknown as InventoryService,
     ),
     transactionService,
+    inventoryService,
   };
 }
 
@@ -165,9 +178,9 @@ describe('ProductsService', () => {
     );
   });
 
-  it('should create a product with category, images, inventory, and initial movement', async () => {
+  it('should create a product with category, images, and delegated inventory initialization', async () => {
     const { databaseService, transaction } = createDatabaseMock();
-    const { service, transactionService } = createService(
+    const { service, transactionService, inventoryService } = createService(
       databaseService,
       transaction,
     );
@@ -222,24 +235,22 @@ describe('ProductsService', () => {
               }),
             ],
           },
-          inventoryItem: {
-            create: {
-              stockQuantity: 5,
-              reservedQuantity: 1,
-            },
-          },
         }),
       }),
     );
-    expect(transaction.inventoryMovement.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        productId: 'product-id',
-        movementType: 'IMPORT',
-        quantity: 5,
-        beforeQuantity: 0,
-        afterQuantity: 5,
+    expect(inventoryService.initializeProductInventory).toHaveBeenCalledWith(
+      'product-id',
+      {
+        stockQuantity: 5,
+        reservedQuantity: 1,
+      },
+      transaction,
+    );
+    expect(transaction.product.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'product-id' },
       }),
-    });
+    );
   });
 
   it('should reject duplicate SKU or slug during create', async () => {
@@ -267,9 +278,23 @@ describe('ProductsService', () => {
     expect(transaction.product.create).not.toHaveBeenCalled();
   });
 
-  it('should update partial product fields, replace images, and record stock adjustment', async () => {
+  it('should update partial product fields, replace images, and delegate inventory update', async () => {
     const { databaseService, transaction } = createDatabaseMock();
-    transaction.product.findUnique.mockResolvedValue(productFixture());
+    transaction.product.findUnique
+      .mockResolvedValueOnce(productFixture())
+      .mockResolvedValueOnce(
+        productFixture({
+          name: 'Updated Product',
+          inventoryItem: {
+            id: 'inventory-id',
+            productId: 'product-id',
+            stockQuantity: 8,
+            reservedQuantity: 1,
+            version: 0,
+            updatedAt,
+          },
+        }),
+      );
     transaction.product.update.mockResolvedValue(
       productFixture({
         name: 'Updated Product',
@@ -283,7 +308,7 @@ describe('ProductsService', () => {
         },
       }),
     );
-    const { service, transactionService } = createService(
+    const { service, transactionService, inventoryService } = createService(
       databaseService,
       transaction,
     );
@@ -313,30 +338,21 @@ describe('ProductsService', () => {
               }),
             ],
           },
-          inventoryItem: {
-            upsert: {
-              create: {
-                stockQuantity: 8,
-                reservedQuantity: 1,
-              },
-              update: {
-                stockQuantity: 8,
-                reservedQuantity: 1,
-              },
-            },
-          },
         }),
       }),
     );
     expect(transactionService.run).toHaveBeenCalledWith(expect.any(Function));
-    expect(transaction.inventoryMovement.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        movementType: 'ADJUSTMENT',
-        quantity: 3,
-        beforeQuantity: 5,
-        afterQuantity: 8,
+    expect(
+      inventoryService.updateProductInventoryFromAdminProduct,
+    ).toHaveBeenCalledWith(
+      'product-id',
+      expect.objectContaining({
+        stockQuantity: 5,
+        reservedQuantity: 1,
       }),
-    });
+      { stockQuantity: 8 },
+      transaction,
+    );
   });
 
   it('should hard-delete products without protected references', async () => {

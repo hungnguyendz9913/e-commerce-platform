@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, DbClient } from '@e-commerce-platform/database';
 import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
 import {
@@ -11,7 +6,6 @@ import {
   ListProductsQueryDto,
   ProductApprovalStatus,
   ProductImageDto,
-  ProductInventoryDto,
   ProductSortField,
   ProductStatus,
   UpdateProductDto,
@@ -21,20 +15,14 @@ import {
   ProductsRepository,
 } from './products.repository';
 import { TransactionService } from '@e-commerce-platform/database';
-
-type ProductInventoryUpdate = {
-  next: {
-    stockQuantity: number;
-    reservedQuantity: number;
-  };
-  previousStockQuantity: number;
-};
+import { InventoryService } from '../inventory/inventory.service';
 
 @Injectable()
 export class ProductsService {
   constructor(
     private readonly productsRepository: ProductsRepository,
     private readonly transactionService: TransactionService,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   async listAdminProducts(query: ListProductsQueryDto) {
@@ -123,11 +111,6 @@ export class ProductsService {
           transaction,
         );
 
-        const stockQuantity = createProductDto.inventory?.stockQuantity ?? 0;
-        const reservedQuantity =
-          createProductDto.inventory?.reservedQuantity ?? 0;
-        this.assertInventoryValues({ stockQuantity, reservedQuantity });
-
         const createdProduct = await this.productsRepository.createProduct(
           {
             sku: createProductDto.sku,
@@ -139,31 +122,17 @@ export class ProductsService {
             status: createProductDto.status,
             approvalStatus: createProductDto.approvalStatus,
             images: this.createImagesInput(createProductDto.images),
-            inventoryItem: {
-              create: {
-                stockQuantity,
-                reservedQuantity,
-              },
-            },
           },
           transaction,
         );
 
-        if (stockQuantity > 0) {
-          await this.productsRepository.createInventoryMovement(
-            {
-              productId: createdProduct.id,
-              movementType: 'IMPORT',
-              quantity: stockQuantity,
-              beforeQuantity: 0,
-              afterQuantity: stockQuantity,
-              reason: 'Initial product stock',
-            },
-            transaction,
-          );
-        }
+        await this.inventoryService.initializeProductInventory(
+          createdProduct.id,
+          createProductDto.inventory,
+          transaction,
+        );
 
-        return createdProduct;
+        return this.getProductOrThrow(createdProduct.id, transaction);
       });
 
       return {
@@ -182,26 +151,24 @@ export class ProductsService {
 
         await this.validateProductUpdate(id, updateProductDto, transaction);
 
-        const inventoryData = this.mergeInventoryValues(
-          existingProduct.inventoryItem,
-          updateProductDto.inventory,
-        );
-
         const updatedProduct = await this.applyProductUpdate(
           id,
           updateProductDto,
-          inventoryData,
           transaction,
         );
 
-        await this.recordInventoryAdjustmentIfNeeded(
-          id,
-          updateProductDto,
-          inventoryData,
-          transaction,
-        );
+        if (updateProductDto.inventory !== undefined) {
+          await this.inventoryService.updateProductInventoryFromAdminProduct(
+            id,
+            existingProduct.inventoryItem,
+            updateProductDto.inventory,
+            transaction,
+          );
+        }
 
-        return updatedProduct;
+        return updateProductDto.inventory === undefined
+          ? updatedProduct
+          : this.getProductOrThrow(id, transaction);
       });
 
       return {
@@ -244,7 +211,6 @@ export class ProductsService {
 
   private buildProductUpdateInput(
     updateProductDto: UpdateProductDto,
-    inventoryData: ProductInventoryUpdate,
   ): Prisma.ProductUpdateArgs['data'] {
     return {
       sku: updateProductDto.sku,
@@ -262,62 +228,17 @@ export class ProductsService {
               deleteMany: {},
               create: this.toImageCreateMany(updateProductDto.images),
             },
-      inventoryItem:
-        updateProductDto.inventory === undefined
-          ? undefined
-          : {
-              upsert: {
-                create: inventoryData.next,
-                update: inventoryData.next,
-              },
-            },
     };
   }
 
   private applyProductUpdate(
     id: string,
     updateProductDto: UpdateProductDto,
-    inventoryData: ProductInventoryUpdate,
     client: DbClient,
   ) {
     return this.productsRepository.updateProduct(
       id,
-      this.buildProductUpdateInput(updateProductDto, inventoryData),
-      client,
-    );
-  }
-
-  private shouldRecordInventoryAdjustment(
-    updateProductDto: UpdateProductDto,
-    inventoryData: ProductInventoryUpdate,
-  ) {
-    return (
-      updateProductDto.inventory?.stockQuantity !== undefined &&
-      inventoryData.previousStockQuantity !== inventoryData.next.stockQuantity
-    );
-  }
-
-  private async recordInventoryAdjustmentIfNeeded(
-    productId: string,
-    updateProductDto: UpdateProductDto,
-    inventoryData: ProductInventoryUpdate,
-    client: DbClient,
-  ) {
-    if (!this.shouldRecordInventoryAdjustment(updateProductDto, inventoryData)) {
-      return;
-    }
-
-    await this.productsRepository.createInventoryMovement(
-      {
-        productId,
-        movementType: 'ADJUSTMENT',
-        quantity:
-          inventoryData.next.stockQuantity -
-          inventoryData.previousStockQuantity,
-        beforeQuantity: inventoryData.previousStockQuantity,
-        afterQuantity: inventoryData.next.stockQuantity,
-        reason: 'Admin product inventory update',
-      },
+      this.buildProductUpdateInput(updateProductDto),
       client,
     );
   }
@@ -476,38 +397,6 @@ export class ProductsService {
       sortOrder: image.sortOrder ?? index,
       isPrimary: image.isPrimary ?? false,
     }));
-  }
-
-  private mergeInventoryValues(
-    existingInventory: ProductWithRelations['inventoryItem'],
-    inventory?: ProductInventoryDto,
-  ) {
-    const previousStockQuantity = existingInventory?.stockQuantity ?? 0;
-    const previousReservedQuantity = existingInventory?.reservedQuantity ?? 0;
-    const next = {
-      stockQuantity: inventory?.stockQuantity ?? previousStockQuantity,
-      reservedQuantity: inventory?.reservedQuantity ?? previousReservedQuantity,
-    };
-
-    this.assertInventoryValues(next);
-
-    return {
-      next,
-      previousStockQuantity,
-    };
-  }
-
-  private assertInventoryValues(inventory: {
-    stockQuantity: number;
-    reservedQuantity: number;
-  }) {
-    if (
-      inventory.stockQuantity < 0 ||
-      inventory.reservedQuantity < 0 ||
-      inventory.reservedQuantity > inventory.stockQuantity
-    ) {
-      throw new BadRequestException('Invalid inventory quantities');
-    }
   }
 
   private mapPrismaError(error: unknown) {

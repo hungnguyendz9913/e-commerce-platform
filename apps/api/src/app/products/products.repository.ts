@@ -113,15 +113,6 @@ export class ProductsRepository {
     });
   }
 
-  createInventoryMovement(
-    data: Prisma.InventoryMovementCreateArgs['data'],
-    client: DbClient = this.databaseService,
-  ) {
-    return client.inventoryMovement.create({
-      data,
-    });
-  }
-
   findProductDeleteInfo(id: string) {
     return this.databaseService.product.findUnique({
       where: { id },
