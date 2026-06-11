@@ -9,7 +9,7 @@ import { SessionRepository } from '../session.repository';
 import { AuthService } from './auth.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
-import { UserService } from '../../user/user.service';
+import { UserService } from '../../users/user.service';
 
 describe('AuthService', () => {
   let service: AuthService;
