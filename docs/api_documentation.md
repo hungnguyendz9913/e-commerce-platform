@@ -18,6 +18,7 @@
 | Date       | Version | A/M/D | Description                                                                                  | Author             |
 | :--------- | :------ | :---: | :------------------------------------------------------------------------------------------- | :----------------- |
 | 08/06/2026 | 1.0     |   A   | Initial API documentation based on SRS, Use-Case Specification, and Software Design Document | Nguyen Hung Nguyen |
+| 11/06/2026 | 1.1     |   M   | Completed API contract alignment with SRS, UCS, SDD, ERD, and current project API map        | Nguyen Hung Nguyen |
 
 > A: Added; M: Modified; D: Deleted
 
@@ -72,6 +73,51 @@ The actual deployed domain should be updated during deployment.
 | Orders     | `/orders`     | Customer             |
 | Payments   | `/payments`   | Customer/Gateway     |
 | Admin      | `/admin`      | Admin                |
+
+## 1.3 Endpoint Summary
+
+| Method | Endpoint                               | Access         | Main Use Case / Requirement                    |
+| :----- | :------------------------------------- | :------------- | :--------------------------------------------- |
+| POST   | `/auth/register`                       | Public         | UC-01, FR-AUTH-001                             |
+| POST   | `/auth/login`                          | Public         | UC-02, FR-AUTH-005                             |
+| POST   | `/auth/refresh`                        | Public         | Session/token handling                         |
+| POST   | `/auth/logout`                         | Customer/Admin | FR-AUTH-007                                    |
+| GET    | `/auth/me`                             | Customer/Admin | Current authenticated identity                 |
+| POST   | `/auth/forgot-password`                | Public         | Password recovery when enabled by auth API map |
+| POST   | `/auth/reset-password`                 | Public         | Password recovery when enabled by auth API map |
+| GET    | `/users/me`                            | Customer/Admin | UC-03, FR-PROFILE-001                          |
+| PATCH  | `/users/me`                            | Customer/Admin | UC-03, FR-PROFILE-002                          |
+| GET    | `/users/me/addresses`                  | Customer       | Delivery address management                    |
+| POST   | `/users/me/addresses`                  | Customer       | Delivery address management                    |
+| GET    | `/products`                            | Public         | UC-04, FR-PRODUCT-001                          |
+| GET    | `/products/{id}`                       | Public         | UC-05, FR-PRODUCT-004                          |
+| GET    | `/categories`                          | Public         | Category browsing and filtering                |
+| GET    | `/cart`                                | Customer       | UC-06, FR-CART-001..007                        |
+| POST   | `/cart/items`                          | Customer       | UC-06                                          |
+| PATCH  | `/cart/items/{itemId}`                 | Customer       | UC-06                                          |
+| DELETE | `/cart/items/{itemId}`                 | Customer       | UC-06                                          |
+| DELETE | `/cart`                                | Customer       | UC-06                                          |
+| POST   | `/checkout/validate`                   | Customer       | UC-07, FR-CHECKOUT-001..008                    |
+| POST   | `/checkout/voucher`                    | Customer       | UC-08, voucher validation                      |
+| POST   | `/checkout`                            | Customer       | UC-07, FR-ORDER-001..005                       |
+| GET    | `/orders`                              | Customer       | UC-10, FR-ORDER-006                            |
+| GET    | `/orders/{orderId}`                    | Customer       | UC-10, FR-ORDER-007                            |
+| POST   | `/orders/{orderId}/cancel`             | Customer       | UC-10, order cancellation                      |
+| POST   | `/payments/create`                     | Customer       | UC-09, FR-PAY-001..003                         |
+| GET    | `/payments/{paymentId}/status`         | Customer       | UC-09, FR-PAY-006..007                         |
+| POST   | `/payments/webhook/{provider}`         | Gateway        | UC-17, FR-PAY-004..005                         |
+| GET    | `/admin/dashboard`                     | Admin          | UC-16, FR-ADMIN-001..002                       |
+| GET    | `/admin/products`                      | Admin          | UC-11, FR-INV-001..004                         |
+| POST   | `/admin/products`                      | Admin          | UC-11                                          |
+| GET    | `/admin/products/{productId}`          | Admin          | UC-11                                          |
+| PATCH  | `/admin/products/{productId}`          | Admin          | UC-11                                          |
+| DELETE | `/admin/products/{productId}`          | Admin          | UC-11                                          |
+| PATCH  | `/admin/inventory/{productId}`         | Admin          | UC-12, FR-INV-005..008                         |
+| GET    | `/admin/orders`                        | Admin          | UC-13, FR-ADMIN-005                            |
+| PATCH  | `/admin/orders/{orderId}/status`       | Admin          | UC-13, FR-ORDER-009                            |
+| GET    | `/admin/customers`                     | Admin          | UC-14, FR-ADMIN-004                            |
+| PATCH  | `/admin/products/{productId}/approval` | Admin          | UC-15, FR-ADMIN-006                            |
+| GET    | `/admin/revenue`                       | Admin          | UC-16, FR-ADMIN-007                            |
 
 ---
 
@@ -319,7 +365,48 @@ Authenticates a user and returns session/token information.
 
 ---
 
-## 6.3 Sign Out
+## 6.3 Refresh Token
+
+### `POST /auth/refresh`
+
+Rotates a valid refresh token and returns a new access token and refresh token. This endpoint supports the session handling requirement documented in the auth specification and API map.
+
+**Access:** Public with valid refresh token
+
+### Request Body
+
+```json
+{
+  "refreshToken": "jwt_refresh_token"
+}
+```
+
+### Success Response `200 OK`
+
+```json
+{
+  "data": {
+    "accessToken": "new_jwt_access_token",
+    "refreshToken": "new_jwt_refresh_token",
+    "user": {
+      "id": "usr_123",
+      "email": "customer@example.com",
+      "fullName": "Nguyen Van A",
+      "roles": ["customer"]
+    }
+  }
+}
+```
+
+### Error Responses
+
+| Status | Code            | Description                              |
+| :----: | :-------------- | :--------------------------------------- |
+|  401   | UNAUTHENTICATED | Refresh token is invalid, expired, or revoked. |
+
+---
+
+## 6.4 Sign Out
 
 ### `POST /auth/logout`
 
@@ -339,7 +426,7 @@ Invalidates the current authenticated session.
 
 ---
 
-## 6.4 Get Current User
+## 6.5 Get Current User
 
 ### `GET /auth/me`
 
@@ -361,6 +448,77 @@ Returns the current authenticated user.
   }
 }
 ```
+
+---
+
+## 6.6 Forgot Password
+
+### `POST /auth/forgot-password`
+
+Starts a password reset flow when password recovery is enabled by the auth API contract. The response must not reveal whether the email exists.
+
+**Access:** Public
+
+### Request Body
+
+```json
+{
+  "email": "customer@example.com"
+}
+```
+
+### Success Response `200 OK`
+
+```json
+{
+  "data": {
+    "message": "If the email exists, password reset instructions have been generated."
+  }
+}
+```
+
+### Error Responses
+
+| Status | Code             | Description          |
+| :----: | :--------------- | :------------------- |
+|  400   | VALIDATION_ERROR | Invalid email value. |
+
+---
+
+## 6.7 Reset Password
+
+### `POST /auth/reset-password`
+
+Resets a password using a valid password reset token and revokes existing sessions for that user.
+
+**Access:** Public
+
+### Request Body
+
+```json
+{
+  "token": "reset-token",
+  "password": "NewPassword123!",
+  "confirmPassword": "NewPassword123!"
+}
+```
+
+### Success Response `200 OK`
+
+```json
+{
+  "data": {
+    "message": "Password has been reset."
+  }
+}
+```
+
+### Error Responses
+
+| Status | Code             | Description                                  |
+| :----: | :--------------- | :------------------------------------------- |
+|  400   | VALIDATION_ERROR | Invalid password or confirmation mismatch.   |
+|  400   | VALIDATION_ERROR | Reset token is invalid or expired.           |
 
 ---
 
@@ -425,7 +583,7 @@ Updates the authenticated user's profile.
 
 ---
 
-## 7.3 Manage Addresses
+## 7.3 List My Addresses
 
 ### `GET /users/me/addresses`
 
@@ -453,6 +611,10 @@ Returns saved delivery addresses.
 }
 ```
 
+---
+
+## 7.4 Create My Address
+
 ### `POST /users/me/addresses`
 
 Creates a new delivery address.
@@ -473,6 +635,33 @@ Creates a new delivery address.
   "isDefault": true
 }
 ```
+
+### Success Response `201 Created`
+
+```json
+{
+  "data": {
+    "id": "addr_123",
+    "recipientName": "Nguyen Van A",
+    "phone": "0900000000",
+    "addressLine": "123 Nguyen Trai",
+    "ward": "Ward 1",
+    "district": "District 5",
+    "city": "Ho Chi Minh City",
+    "country": "Vietnam",
+    "isDefault": true,
+    "createdAt": "2026-06-08T10:00:00.000Z",
+    "updatedAt": "2026-06-08T10:00:00.000Z"
+  }
+}
+```
+
+### Error Responses
+
+| Status | Code             | Description                    |
+| :----: | :--------------- | :----------------------------- |
+|  400   | VALIDATION_ERROR | Invalid delivery address data. |
+|  401   | UNAUTHENTICATED  | Authentication is required.    |
 
 ---
 
@@ -513,8 +702,12 @@ Returns public products with search, filter, sorting, and pagination.
       "thumbnailUrl": "https://example.com/keyboard.png",
       "category": {
         "id": "cat_123",
-        "name": "Accessories"
+        "name": "Accessories",
+        "slug": "accessories"
       },
+      "primaryImageUrl": "https://example.com/keyboard.png",
+      "stockQuantity": 20,
+      "reservedQuantity": 0,
       "inStock": true
     }
   ],
@@ -550,7 +743,8 @@ Returns detail of a product.
     "price": 350000,
     "category": {
       "id": "cat_123",
-      "name": "Accessories"
+      "name": "Accessories",
+      "slug": "accessories"
     },
     "images": [
       {
@@ -561,6 +755,7 @@ Returns detail of a product.
       }
     ],
     "stockQuantity": 20,
+    "reservedQuantity": 0,
     "inStock": true
   }
 }
@@ -591,7 +786,16 @@ Returns active product categories.
       "id": "cat_123",
       "name": "Accessories",
       "slug": "accessories",
-      "parentId": null
+      "description": "Computer accessories.",
+      "parentId": null,
+      "children": [
+        {
+          "id": "cat_456",
+          "name": "Keyboards",
+          "slug": "keyboards",
+          "parentId": "cat_123"
+        }
+      ]
     }
   ]
 }
@@ -629,6 +833,7 @@ Returns the authenticated customer's active cart.
     "subtotalAmount": 700000,
     "discountAmount": 0,
     "shippingFee": 0,
+    "taxAmount": 0,
     "totalAmount": 700000
   }
 }
@@ -961,6 +1166,8 @@ Returns details of an order owned by the authenticated customer.
     "shippingFee": 30000,
     "taxAmount": 0,
     "totalAmount": 930000,
+    "recipientName": "Nguyen Van A",
+    "recipientPhone": "0900000000",
     "shippingAddress": "123 Nguyen Trai, Ward 1, District 5, Ho Chi Minh City, Vietnam",
     "createdAt": "2026-06-08T10:00:00.000Z"
   }
@@ -1121,12 +1328,104 @@ Returns products for admin management.
 | categoryId     | uuid   |    No    | Category filter. |
 | status         | string |    No    | Product status.  |
 | approvalStatus | string |    No    | Approval status. |
+| minPrice       | number |    No    | Minimum price.   |
+| maxPrice       | number |    No    | Maximum price.   |
+| inStock        | boolean |   No    | Stock filter.    |
+| sortBy         | string |    No    | createdAt, updatedAt, name, price, sku, status, approvalStatus. |
+| sortOrder      | string |    No    | asc or desc.     |
 | page           | number |    No    | Page number.     |
 | limit          | number |    No    | Items per page.  |
 
 ---
 
-## 13.3 Create Product
+### Success Response `200 OK`
+
+```json
+{
+  "data": [
+    {
+      "id": "prd_123",
+      "sku": "KB-001",
+      "name": "Wireless Keyboard",
+      "slug": "wireless-keyboard",
+      "price": 350000,
+      "status": "active",
+      "approvalStatus": "approved",
+      "category": {
+        "id": "cat_123",
+        "name": "Accessories",
+        "slug": "accessories"
+      },
+      "primaryImageUrl": "https://example.com/keyboard.png",
+      "stockQuantity": 20,
+      "reservedQuantity": 0,
+      "createdAt": "2026-06-08T10:00:00.000Z",
+      "updatedAt": "2026-06-08T10:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+## 13.3 Get Admin Product Detail
+
+### `GET /admin/products/{productId}`
+
+Returns product detail for admin management, including hidden, archived, pending, or rejected products.
+
+**Access:** Admin
+
+### Success Response `200 OK`
+
+```json
+{
+  "data": {
+    "id": "prd_123",
+    "sku": "KB-001",
+    "name": "Wireless Keyboard",
+    "slug": "wireless-keyboard",
+    "description": "Compact wireless keyboard.",
+    "price": 350000,
+    "status": "active",
+    "approvalStatus": "approved",
+    "category": {
+      "id": "cat_123",
+      "name": "Accessories",
+      "slug": "accessories"
+    },
+    "images": [
+      {
+        "id": "img_123",
+        "imageUrl": "https://example.com/keyboard.png",
+        "altText": "Wireless Keyboard",
+        "sortOrder": 1,
+        "isPrimary": true
+      }
+    ],
+    "stockQuantity": 20,
+    "reservedQuantity": 0,
+    "createdAt": "2026-06-08T10:00:00.000Z",
+    "updatedAt": "2026-06-08T10:00:00.000Z"
+  }
+}
+```
+
+### Error Responses
+
+| Status | Code      | Description              |
+| :----: | :-------- | :----------------------- |
+|  404   | NOT_FOUND | Product does not exist.  |
+
+---
+
+## 13.4 Create Product
 
 ### `POST /admin/products`
 
@@ -1154,7 +1453,10 @@ Creates a new product.
       "sortOrder": 1
     }
   ],
-  "initialStock": 20
+  "inventory": {
+    "stockQuantity": 20,
+    "reservedQuantity": 0
+  }
 }
 ```
 
@@ -1169,14 +1471,23 @@ Creates a new product.
     "price": 350000,
     "status": "active",
     "approvalStatus": "approved",
-    "stockQuantity": 20
+    "stockQuantity": 20,
+    "reservedQuantity": 0
   }
 }
 ```
 
+### Error Responses
+
+| Status | Code             | Description                                            |
+| :----: | :--------------- | :----------------------------------------------------- |
+|  400   | VALIDATION_ERROR | Invalid product, image, category, or inventory data.   |
+|  404   | NOT_FOUND        | Category does not exist or is not active.              |
+|  409   | CONFLICT         | SKU or slug already exists.                            |
+
 ---
 
-## 13.4 Update Product
+## 13.5 Update Product
 
 ### `PATCH /admin/products/{productId}`
 
@@ -1191,7 +1502,11 @@ Updates product information.
   "name": "Wireless Keyboard Pro",
   "description": "Updated description.",
   "price": 420000,
-  "status": "active"
+  "status": "active",
+  "inventory": {
+    "stockQuantity": 50,
+    "reservedQuantity": 0
+  }
 }
 ```
 
@@ -1203,18 +1518,20 @@ Updates product information.
     "id": "prd_123",
     "name": "Wireless Keyboard Pro",
     "price": 420000,
-    "status": "active"
+    "status": "active",
+    "stockQuantity": 50,
+    "reservedQuantity": 0
   }
 }
 ```
 
 ---
 
-## 13.5 Delete or Deactivate Product
+## 13.6 Delete or Archive Product
 
 ### `DELETE /admin/products/{productId}`
 
-Deletes or deactivates a product according to business rules.
+Deletes a product when no protected commerce history exists. Otherwise archives the product so it is no longer publicly visible.
 
 **Access:** Admin
 
@@ -1224,14 +1541,14 @@ Deletes or deactivates a product according to business rules.
 {
   "data": {
     "success": true,
-    "mode": "deactivated"
+    "mode": "archived"
   }
 }
 ```
 
 ---
 
-## 13.6 Update Inventory
+## 13.7 Update Inventory
 
 ### `PATCH /admin/inventory/{productId}`
 
@@ -1243,7 +1560,8 @@ Updates stock quantity for a product.
 
 ```json
 {
-  "quantity": 50,
+  "stockQuantity": 50,
+  "reservedQuantity": 0,
   "reason": "Manual restock"
 }
 ```
@@ -1255,6 +1573,14 @@ Updates stock quantity for a product.
   "data": {
     "productId": "prd_123",
     "stockQuantity": 50,
+    "reservedQuantity": 0,
+    "movement": {
+      "movementType": "adjustment",
+      "quantity": 30,
+      "beforeQuantity": 20,
+      "afterQuantity": 50,
+      "reason": "Manual restock"
+    },
     "updatedAt": "2026-06-08T10:00:00.000Z"
   }
 }
@@ -1262,7 +1588,7 @@ Updates stock quantity for a product.
 
 ---
 
-## 13.7 List Admin Orders
+## 13.8 List Admin Orders
 
 ### `GET /admin/orders`
 
@@ -1282,9 +1608,38 @@ Returns all orders for admin management.
 | page          | number |    No    | Page number.                        |
 | limit         | number |    No    | Items per page.                     |
 
+### Success Response `200 OK`
+
+```json
+{
+  "data": [
+    {
+      "id": "ord_123",
+      "orderNumber": "ECOM-20260608-0001",
+      "customer": {
+        "id": "usr_123",
+        "email": "customer@example.com",
+        "fullName": "Nguyen Van A"
+      },
+      "status": "pending",
+      "paymentStatus": "pending",
+      "totalAmount": 930000,
+      "createdAt": "2026-06-08T10:00:00.000Z",
+      "updatedAt": "2026-06-08T10:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
 ---
 
-## 13.8 Update Order Status
+## 13.9 Update Order Status
 
 ### `PATCH /admin/orders/{orderId}/status`
 
@@ -1321,7 +1676,7 @@ Updates order status according to valid lifecycle transitions.
 
 ---
 
-## 13.9 List Customers
+## 13.10 List Customers
 
 ### `GET /admin/customers`
 
@@ -1338,9 +1693,33 @@ Returns customer records for admin management.
 | page   | number |    No    | Page number.                     |
 | limit  | number |    No    | Items per page.                  |
 
+### Success Response `200 OK`
+
+```json
+{
+  "data": [
+    {
+      "id": "usr_123",
+      "email": "customer@example.com",
+      "fullName": "Nguyen Van A",
+      "phone": "0900000000",
+      "status": "active",
+      "createdAt": "2026-06-08T10:00:00.000Z",
+      "updatedAt": "2026-06-08T10:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "totalPages": 1
+  }
+}
+```
+
 ---
 
-## 13.10 Approve or Reject Product
+## 13.11 Approve or Reject Product
 
 ### `PATCH /admin/products/{productId}/approval`
 
@@ -1370,7 +1749,7 @@ Updates product approval status.
 
 ---
 
-## 13.11 Revenue Metrics
+## 13.12 Revenue Metrics
 
 ### `GET /admin/revenue`
 
@@ -1469,7 +1848,38 @@ export interface UserDto {
 }
 ```
 
-## 15.2 Product DTO
+## 15.2 Address DTO
+
+```ts
+export interface AddressDto {
+  id: string;
+  recipientName: string;
+  phone: string;
+  addressLine: string;
+  ward?: string | null;
+  district?: string | null;
+  city: string;
+  country: string;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+## 15.3 Category DTO
+
+```ts
+export interface CategoryDto {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  parentId?: string | null;
+  children?: CategoryDto[];
+}
+```
+
+## 15.4 Product DTO
 
 ```ts
 export interface ProductDto {
@@ -1482,13 +1892,29 @@ export interface ProductDto {
   category: CategoryDto;
   images: ProductImageDto[];
   stockQuantity: number;
+  reservedQuantity: number;
   inStock: boolean;
   status: 'active' | 'inactive' | 'archived';
   approvalStatus: 'pending' | 'approved' | 'rejected';
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ProductImageDto {
+  id?: string;
+  imageUrl: string;
+  altText?: string | null;
+  sortOrder?: number;
+  isPrimary?: boolean;
+}
+
+export interface ProductInventoryDto {
+  stockQuantity?: number;
+  reservedQuantity?: number;
 }
 ```
 
-## 15.3 Cart DTO
+## 15.5 Cart DTO
 
 ```ts
 export interface CartDto {
@@ -1497,6 +1923,7 @@ export interface CartDto {
   subtotalAmount: number;
   discountAmount: number;
   shippingFee: number;
+  taxAmount: number;
   totalAmount: number;
 }
 
@@ -1511,7 +1938,41 @@ export interface CartItemDto {
 }
 ```
 
-## 15.4 Order DTO
+## 15.6 Checkout DTO
+
+```ts
+export interface DeliveryInfoDto {
+  recipientName: string;
+  phone: string;
+  addressLine: string;
+  ward?: string | null;
+  district?: string | null;
+  city: string;
+  country: string;
+}
+
+export interface CheckoutRequestDto {
+  deliveryInfo: DeliveryInfoDto;
+  voucherCode?: string | null;
+  paymentMethod: 'card' | 'wallet' | 'bank_transfer' | 'cod' | 'momo' | 'vnpay' | 'paypal' | 'stripe';
+}
+
+export interface CheckoutSummaryDto {
+  subtotalAmount: number;
+  discountAmount: number;
+  shippingFee: number;
+  taxAmount: number;
+  totalAmount: number;
+}
+
+export interface VoucherApplicationDto {
+  voucherCode: string;
+  discountAmount: number;
+  summary: CheckoutSummaryDto;
+}
+```
+
+## 15.7 Order DTO
 
 ```ts
 export interface OrderDto {
@@ -1531,12 +1992,24 @@ export interface OrderDto {
   shippingFee: number;
   taxAmount: number;
   totalAmount: number;
+  recipientName: string;
+  recipientPhone: string;
   shippingAddress: string;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface OrderItemDto {
+  productId: string;
+  productName: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
 }
 ```
 
-## 15.5 Payment DTO
+## 15.8 Payment DTO
 
 ```ts
 export interface PaymentDto {
@@ -1549,6 +2022,43 @@ export interface PaymentDto {
   currency: string;
   paymentUrl?: string | null;
   updatedAt: string;
+}
+```
+
+## 15.9 Inventory Movement DTO
+
+```ts
+export interface InventoryMovementDto {
+  id?: string;
+  productId?: string;
+  movementType: 'import' | 'adjustment' | 'sale' | 'cancellation' | 'refund';
+  quantity: number;
+  beforeQuantity: number;
+  afterQuantity: number;
+  reason?: string | null;
+  referenceId?: string | null;
+  createdAt?: string;
+}
+```
+
+## 15.10 Admin Metrics DTO
+
+```ts
+export interface AdminDashboardDto {
+  totalRevenue: number;
+  totalOrders: number;
+  totalCustomers: number;
+  pendingOrders: number;
+  lowStockProducts: number;
+}
+
+export interface RevenueMetricsDto {
+  totalRevenue: number;
+  series: Array<{
+    period: string;
+    revenue: number;
+    orders: number;
+  }>;
 }
 ```
 
@@ -1594,7 +2104,59 @@ export interface PaymentDto {
 | canceled  | pending if retry is allowed |
 | refunded  | None                        |
 
-## 17.3 Recommended Playwright API-related E2E Tests
+## 17.3 Enum Reference
+
+### User and Role Values
+
+| Enum | Values |
+| :--- | :----- |
+| Role | `customer`, `admin` |
+| User status | `active`, `inactive`, `blocked` |
+
+### Catalog Values
+
+| Enum | Values |
+| :--- | :----- |
+| Category status | `active`, `inactive` |
+| Product status | `active`, `inactive`, `archived` |
+| Product approval status | `pending`, `approved`, `rejected` |
+| Product sort field | `createdAt`, `updatedAt`, `name`, `price`, `sku`, `status`, `approvalStatus` |
+| Sort order | `asc`, `desc` |
+
+### Inventory Values
+
+| Enum | Values |
+| :--- | :----- |
+| Inventory movement type | `import`, `adjustment`, `sale`, `cancellation`, `refund` |
+
+### Commerce Values
+
+| Enum | Values |
+| :--- | :----- |
+| Cart status | `active`, `checked_out`, `abandoned` |
+| Voucher discount type | `percent`, `fixed_amount` |
+| Voucher status | `active`, `inactive`, `expired` |
+| Order status | `pending`, `processing`, `shipped`, `delivered`, `canceled`, `refunded` |
+| Payment status | `pending`, `succeeded`, `failed`, `canceled`, `refunded` |
+| Payment provider | `stripe`, `paypal`, `vnpay`, `momo`, `cod` |
+| Payment method | `card`, `wallet`, `bank_transfer`, `cod` |
+| Payment transaction type | `charge`, `refund`, `capture`, `void` |
+| Payment webhook processing status | `received`, `processed`, `failed`, `ignored` |
+
+## 17.4 Data Integrity and Security Rules
+
+| Area | API Rule |
+| :--- | :------- |
+| Authentication | Responses must never expose password hashes, refresh token hashes, reset token secrets, or payment secrets. |
+| Public product visibility | Public product APIs return only products with `status=active` and `approvalStatus=approved`; hidden products return `404`. |
+| Cart ownership | Cart endpoints operate only on the authenticated customer's active cart. |
+| Checkout transaction | Order creation, stock deduction, voucher redemption, and cart checkout must commit or roll back together. |
+| Inventory | Stock and reserved quantities must never become negative, and reserved quantity must not exceed stock quantity. |
+| Orders | Customer order endpoints return only orders owned by the authenticated customer. |
+| Payments | Payment amount must match the order payable amount, and webhook events must be signature-verified and idempotent. |
+| Admin | All `/admin` endpoints require authentication plus the `admin` role. |
+
+## 17.5 Recommended Playwright API-related E2E Tests
 
 | Test ID     | Scenario                             | Main APIs                                   |
 | :---------- | :----------------------------------- | :------------------------------------------ |
