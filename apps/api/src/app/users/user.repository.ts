@@ -167,6 +167,16 @@ export class UserRepository {
     return this.databaseService.user.update({
       where: {id},
       data,
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        avatarUrl: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      }
     });
   }
 }
