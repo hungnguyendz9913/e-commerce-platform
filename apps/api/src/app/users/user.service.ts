@@ -1,4 +1,4 @@
-import { Roles, type CreateUserDto } from '@e-commerce-platform/types';
+import { type CreateUserDto } from '@e-commerce-platform/api-contracts';
 import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
 import {
   ConflictException,
@@ -9,11 +9,12 @@ import {
 import { UserRepository } from './user.repository';
 import { CreateMyAddressDto, UpdateProfileDto } from '@e-commerce-platform/api-contracts';
 import { Prisma } from '@e-commerce-platform/database';
-import { AddressRepository } from '../addresses/address.repository';
+import { AddressService } from '../addresses/address.service';
+import { Roles } from '@e-commerce-platform/types';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRepository: UserRepository, private readonly addressRepository: AddressRepository) {}
+  constructor(private readonly userRepository: UserRepository, private readonly addressService: AddressService) {}
 
   async createUser(createUserDto: CreateUserDto) {
     const existingUser = await this.userRepository.findUserByEmail(
@@ -112,10 +113,10 @@ export class UserService {
   }
 
   async getMyAddresses(id: string) {
-    return this.addressRepository.getAddressesByUserId(id);
+    return this.addressService.getAddressesByUserId(id);
   }
 
   async createMyAddress(id: string, createMyAddressDto: CreateMyAddressDto) {
-    return this.addressRepository.createMyAddress(id, createMyAddressDto);
+    return this.addressService.createMyAddress(id, createMyAddressDto);
   }
 }
