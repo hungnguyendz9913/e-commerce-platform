@@ -6,8 +6,8 @@ import { Roles } from '@e-commerce-platform/types';
 import { AuthController } from '../../../api/src/app/auth/auth.controller';
 import { JwtAuthGuard } from '../../../api/src/app/auth/guards/jwt-auth.guard';
 import { AuthService } from '../../../api/src/app/auth/services/auth.service';
-import { UserController } from '../../../api/src/app/user/user.controller';
-import { UserService } from '../../../api/src/app/user/user.service';
+import { UserController } from '../../../api/src/app/users/user.controller';
+import { UserService } from '../../../api/src/app/users/user.service';
 import {
   closeApiTestResources,
   createApiContext,

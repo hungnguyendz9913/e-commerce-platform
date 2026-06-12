@@ -1,6 +1,6 @@
 import { DatabaseService } from "@e-commerce-platform/database";
+import { CreateMyAddressDto } from "@e-commerce-platform/api-contracts";
 import { Injectable } from "@nestjs/common";
-import { CreateMyAddressDto } from "../../../../../libs/api/contracts/src/lib/addresses/create-address.dto";
 
 @Injectable()
 export class AddressRepository {

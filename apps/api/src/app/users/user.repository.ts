@@ -1,5 +1,6 @@
 import { DatabaseService, DbClient, Prisma } from '@e-commerce-platform/database';
-import type { CreateUserDto, RoleName } from '@e-commerce-platform/types';
+import type { CreateUserDto } from '@e-commerce-platform/api-contracts';
+import type { RoleName } from '@e-commerce-platform/types';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()

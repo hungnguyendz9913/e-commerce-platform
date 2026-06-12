@@ -57,6 +57,7 @@ export class CartRepository {
       },
       data: {
         quantity,
+        unitPriceSnapshot,
       },
     });
   }
@@ -64,7 +65,7 @@ export class CartRepository {
   async findCartItemByIdAndCartId(itemId: string, cartId: string) {
     return this.databaseService.cartItem.findFirst({
       where: {
-        itemId,
+        id: itemId,
         cartId
       }
     });

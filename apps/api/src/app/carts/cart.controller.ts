@@ -1,14 +1,26 @@
-import { Body, Controller, Get, Param, Patch, Post, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   CurrentUser,
   Roles,
+  RolesGuard,
   type AuthenticatedUser,
 } from '@e-commerce-platform/api-common';
 import { AddItemToCartDto, UpdateCartItemQuantityDto } from '@e-commerce-platform/api-contracts';
 import { Roles as RoleValues } from '@e-commerce-platform/types';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CartService } from './cart.service';
 
 @Controller('cart')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(RoleValues.CUSTOMER)
 export class CartController {
   constructor(private readonly cartService: CartService) {}
