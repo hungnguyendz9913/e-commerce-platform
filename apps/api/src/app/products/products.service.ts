@@ -501,4 +501,8 @@ export class ProductsService {
 
     return String(value);
   }
+
+  async findProductForCart(productId: string) {
+    return this.productsRepository.findProductForCart(productId);
+  }
 }

@@ -140,4 +140,17 @@ export class ProductsRepository {
   deleteProduct(id: string) {
     return this.databaseService.product.delete({ where: { id } });
   }
+
+  findProductForCart(productId: string) {
+    return this.databaseService.product.findFirst({
+      where: {
+        id: productId,
+        status: 'ACTIVE',
+        approvalStatus: 'APPROVED',
+      },
+      include: {
+        inventoryItem: true,
+      },
+    })
+  }
 }
