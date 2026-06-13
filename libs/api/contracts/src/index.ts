@@ -30,3 +30,9 @@ export * from './lib/carts/create-cart.dto.js';
 export * from './lib/carts/update-cart.dto.js';
 export * from './lib/carts/add-item-to-cart.dto.js';
 export * from './lib/carts/update-cart-item-quantity.dto.js';
+
+// Vouchers
+export * from './lib/vouchers/create-voucher.dto.js';
+export * from './lib/vouchers/find-vouchers-query.dto.js';
+export * from './lib/vouchers/update-voucher.dto.js';
+export * from './lib/vouchers/voucher.enums.js';
