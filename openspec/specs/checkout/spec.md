@@ -23,13 +23,13 @@ The system SHALL allow a customer to apply a valid voucher during checkout.
 
 #### Scenario: Valid voucher applied
 
-- GIVEN a voucher is active, within its valid time range, meets minimum order amount, and has remaining usage
+- GIVEN a voucher is active, within its valid time range, meets minimum order amount, matches its order/product/category scope, and has remaining usage
 - WHEN `POST /checkout/voucher` is called
 - THEN the system returns the calculated discount and updated totals.
 
 #### Scenario: Invalid voucher rejected
 
-- GIVEN a voucher is missing, expired, inactive, over limit, or below minimum amount
+- GIVEN a voucher is missing, expired, inactive, over limit, below minimum amount, or not applicable to the cart products/categories
 - WHEN the customer applies the voucher
 - THEN the system rejects it with a business rule violation.
 

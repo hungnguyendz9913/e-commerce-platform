@@ -9,7 +9,7 @@ The documented and current Prisma model is relational and PostgreSQL-oriented. I
 - Catalog: `categories`, `products`, `product_images`.
 - Inventory: `inventory_items`, `inventory_movements`.
 - Cart: `carts`, `cart_items`.
-- Promotion: `vouchers`, `voucher_redemptions`.
+- Promotion: `vouchers`, `voucher_products`, `voucher_categories`, `voucher_redemptions`.
 - Order: `orders`, `order_items`, `order_status_histories`.
 - Payment: `payments`, `payment_transactions`, `payment_webhook_events`.
 - Audit: `audit_logs`.
@@ -24,6 +24,8 @@ The documented and current Prisma model is relational and PostgreSQL-oriented. I
 - One inventory item exists per product.
 - One product row appears once per cart through unique cart/product cart items.
 - Voucher code is unique.
+- Voucher product mappings are unique by voucher/product.
+- Voucher category mappings are unique by voucher/category.
 - One voucher redemption is linked to a final order.
 - Order number is unique.
 - External payment transaction id is unique when present.
@@ -47,3 +49,4 @@ The documented and current Prisma model is relational and PostgreSQL-oriented. I
 - Payment amount must match the payable order amount.
 - Webhook signature verification is required before payment/order status changes.
 - Webhook processing must be idempotent using unique external event ids.
+- Voucher scope controls applicability: `ORDER` applies to the whole cart, `PRODUCT` uses `voucher_products`, and `CATEGORY` uses `voucher_categories`.

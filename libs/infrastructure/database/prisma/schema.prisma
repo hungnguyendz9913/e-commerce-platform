@@ -99,9 +99,10 @@ model Category {
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
 
-  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children Category[] @relation("CategoryHierarchy")
-  products Product[]
+  parent            Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children          Category[]        @relation("CategoryHierarchy")
+  products          Product[]
+  voucherCategories VoucherCategory[]
 
   @@index([parentId])
   @@map("categories")
@@ -126,6 +127,7 @@ model Product {
   inventoryItem      InventoryItem?
   inventoryMovements InventoryMovement[]
   orderItems         OrderItem[]
+  voucherProducts    VoucherProduct[]
 
   @@index([name])
   @@index([categoryId, status, approvalStatus])
@@ -223,13 +225,42 @@ model Voucher {
   startsAt              DateTime?     @map("starts_at")
   expiresAt             DateTime?     @map("expires_at")
   status                VoucherStatus @default(ACTIVE)
+  scope                 VoucherScope  @default(ORDER)
   createdAt             DateTime      @default(now()) @map("created_at")
   updatedAt             DateTime      @updatedAt @map("updated_at")
 
+  categories  VoucherCategory[]
   orders      Order[]
+  products    VoucherProduct[]
   redemptions VoucherRedemption[]
 
   @@map("vouchers")
+}
+
+model VoucherProduct {
+  voucherId String   @map("voucher_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  voucher Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+
+  @@id([voucherId, productId])
+  @@index([productId])
+  @@map("voucher_products")
+}
+
+model VoucherCategory {
+  voucherId  String   @map("voucher_id") @db.Uuid
+  categoryId String   @map("category_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  voucher  Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+
+  @@id([voucherId, categoryId])
+  @@index([categoryId])
+  @@map("voucher_categories")
 }
 
 model VoucherRedemption {
@@ -449,6 +480,14 @@ enum VoucherStatus {
   EXPIRED  @map("expired")
 
   @@map("voucher_status")
+}
+
+enum VoucherScope {
+  ORDER    @map("order")
+  PRODUCT  @map("product")
+  CATEGORY @map("category")
+
+  @@map("voucher_scope")
 }
 
 enum OrderStatus {

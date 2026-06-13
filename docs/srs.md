@@ -291,8 +291,8 @@ The system shall allow customers to complete checkout by providing delivery info
 | FR-CHECKOUT-001 | The system shall require authentication before checkout.                                                                          | High     |
 | FR-CHECKOUT-002 | The system shall allow customers to enter delivery information.                                                                   | High     |
 | FR-CHECKOUT-003 | The system shall validate required delivery information.                                                                          | High     |
-| FR-CHECKOUT-004 | The system shall allow customers to apply a valid voucher.                                                                        | Medium   |
-| FR-CHECKOUT-005 | The system shall reject invalid, expired, or inapplicable vouchers.                                                               | Medium   |
+| FR-CHECKOUT-004 | The system shall allow customers to apply a valid order-wide, product-specific, or category-specific voucher.                     | Medium   |
+| FR-CHECKOUT-005 | The system shall reject invalid, expired, or inapplicable vouchers, including vouchers that do not match cart products/categories. | Medium   |
 | FR-CHECKOUT-006 | The system shall allow customers to select a supported payment method.                                                            | High     |
 | FR-CHECKOUT-007 | The system shall show a final order summary before confirmation.                                                                  | High     |
 | FR-CHECKOUT-008 | The system shall create an order only after successful validation of cart, stock, delivery information, and payment requirements. | High     |
@@ -301,7 +301,7 @@ The system shall allow customers to complete checkout by providing delivery info
 
 - Checkout requires a signed-in customer.
 - Required delivery fields are validated.
-- Valid vouchers reduce the order total correctly.
+- Valid vouchers reduce the order total correctly according to their order, product, or category scope.
 - Invalid vouchers are rejected with clear feedback.
 - The order summary displays the correct final amount.
 
@@ -590,7 +590,7 @@ The backend shall expose REST APIs for the frontend application. APIs shall use 
 | Order     | Stores order header information, total amount, status, and customer information |
 | OrderItem | Stores products and quantities inside an order                                  |
 | Payment   | Stores payment request, gateway reference, payment status, and amount           |
-| Voucher   | Stores discount code, validity, and discount rules                              |
+| Voucher   | Stores discount code, validity, scope, and discount rules                       |
 | AdminLog  | Stores administrative actions for audit purposes where applicable               |
 
 ## 5.2. Appendix B - Proposed Checkout Flow

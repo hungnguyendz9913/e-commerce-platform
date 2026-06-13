@@ -9,7 +9,7 @@
 - CategoriesModule: category hierarchy, active category visibility, category listing, and category-product relationship.
 - InventoryModule: one inventory item per product, stock/reserved quantities, movement logs, manual adjustment, stock validation, deduction, cancellation, refund, and overselling prevention.
 - CartModule: active customer cart, item add/update/remove/clear, price snapshots, cart totals, stock validation, and ownership.
-- VouchersModule: voucher validation, discount calculation, active/time validity, minimum order amount, maximum discount, global limits, per-user limits, and redemptions.
+- VouchersModule: voucher validation, scope-based product/category applicability, discount calculation, active/time validity, minimum order amount, maximum discount, global limits, per-user limits, and redemptions.
 - CheckoutModule: checkout validation, delivery information validation, voucher application, payment method selection, cart-to-order orchestration, and transactional stock deduction.
 - OrdersModule: order creation, customer history/detail/cancel, status history, order status policy, order item snapshots, and admin lifecycle updates.
 - PaymentsModule: payment creation, status lookup, provider adapters, external payment references, transaction records, webhook signature verification, idempotent webhook event processing, and payment/order status updates.

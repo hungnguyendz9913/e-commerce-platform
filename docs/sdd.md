@@ -527,7 +527,7 @@ The detailed data model is defined in `entity_relationship_diagram.md`. The main
 | Catalog       | products, categories, product_images                   |
 | Inventory     | inventory_items, inventory_movements                   |
 | Cart          | carts, cart_items                                      |
-| Checkout      | vouchers, voucher_redemptions, addresses               |
+| Checkout      | vouchers, voucher_products, voucher_categories, voucher_redemptions, addresses |
 | Orders        | orders, order_items, order_status_histories            |
 | Payments      | payments, payment_transactions, payment_webhook_events |
 | Admin / Audit | audit_logs                                             |

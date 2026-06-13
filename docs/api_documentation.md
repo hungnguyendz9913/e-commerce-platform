@@ -2136,6 +2136,7 @@ export interface RevenueMetricsDto {
 | Cart status | `active`, `checked_out`, `abandoned` |
 | Voucher discount type | `percent`, `fixed_amount` |
 | Voucher status | `active`, `inactive`, `expired` |
+| Voucher scope | `order`, `product`, `category` |
 | Order status | `pending`, `processing`, `shipped`, `delivered`, `canceled`, `refunded` |
 | Payment status | `pending`, `succeeded`, `failed`, `canceled`, `refunded` |
 | Payment provider | `stripe`, `paypal`, `vnpay`, `momo`, `cod` |

@@ -64,13 +64,17 @@ erDiagram
     USERS ||--o{ AUDIT_LOGS : performs
 
     CATEGORIES ||--o{ PRODUCTS : contains
+    CATEGORIES ||--o{ VOUCHER_CATEGORIES : targeted_by
     PRODUCTS ||--o{ PRODUCT_IMAGES : has
     PRODUCTS ||--|| INVENTORY_ITEMS : tracks
     PRODUCTS ||--o{ INVENTORY_MOVEMENTS : has
     PRODUCTS ||--o{ CART_ITEMS : selected_in
     PRODUCTS ||--o{ ORDER_ITEMS : purchased_as
+    PRODUCTS ||--o{ VOUCHER_PRODUCTS : targeted_by
 
     CARTS ||--o{ CART_ITEMS : contains
+    VOUCHERS ||--o{ VOUCHER_PRODUCTS : targets
+    VOUCHERS ||--o{ VOUCHER_CATEGORIES : targets
     VOUCHERS ||--o{ VOUCHER_REDEMPTIONS : has
     VOUCHERS ||--o{ ORDERS : applied_to
 
@@ -216,8 +220,21 @@ erDiagram
         datetime starts_at
         datetime expires_at
         enum status
+        enum scope
         datetime created_at
         datetime updated_at
+    }
+
+    VOUCHER_PRODUCTS {
+        uuid voucher_id FK
+        uuid product_id FK
+        datetime created_at
+    }
+
+    VOUCHER_CATEGORIES {
+        uuid voucher_id FK
+        uuid category_id FK
+        datetime created_at
     }
 
     VOUCHER_REDEMPTIONS {
@@ -329,7 +346,7 @@ erDiagram
 | Catalog             | categories, products, product_images                   | Product browsing, search, and management.   |
 | Inventory           | inventory_items, inventory_movements                   | Stock tracking and overselling prevention.  |
 | Cart                | carts, cart_items                                      | Customer shopping cart.                     |
-| Promotion           | vouchers, voucher_redemptions                          | Discount and voucher application.           |
+| Promotion           | vouchers, voucher_products, voucher_categories, voucher_redemptions | Discount and voucher application.           |
 | Order               | orders, order_items, order_status_histories            | Checkout result and order lifecycle.        |
 | Payment             | payments, payment_transactions, payment_webhook_events | Payment integration and webhook processing. |
 | Audit               | audit_logs                                             | Admin and business action traceability.     |
@@ -527,10 +544,31 @@ Stores promotional voucher definitions.
 | starts_at               | datetime | Nullable         | Valid start time.                         |
 | expires_at              | datetime | Nullable         | Expiration time.                          |
 | status                  | enum     | Not null         | active, inactive, expired.                |
+| scope                   | enum     | Not null         | order, product, or category.              |
 | created_at              | datetime | Not null         | Creation timestamp.                       |
 | updated_at              | datetime | Not null         | Last update timestamp.                    |
 
-## 4.14 `voucher_redemptions`
+## 4.14 `voucher_products`
+
+Maps product-scoped vouchers to eligible products.
+
+| Column     | Type     | Constraint              | Description              |
+| :--------- | :------- | :---------------------- | :----------------------- |
+| voucher_id | uuid     | PK, FK vouchers.id      | Related voucher.         |
+| product_id | uuid     | PK, FK products.id      | Eligible product.        |
+| created_at | datetime | Not null                | Mapping creation time.   |
+
+## 4.15 `voucher_categories`
+
+Maps category-scoped vouchers to eligible product categories.
+
+| Column      | Type     | Constraint              | Description              |
+| :---------- | :------- | :---------------------- | :----------------------- |
+| voucher_id  | uuid     | PK, FK vouchers.id      | Related voucher.         |
+| category_id | uuid     | PK, FK categories.id    | Eligible category.       |
+| created_at  | datetime | Not null                | Mapping creation time.   |
+
+## 4.16 `voucher_redemptions`
 
 Stores voucher usage records.
 
@@ -543,7 +581,7 @@ Stores voucher usage records.
 | discount_amount | decimal  | Not null       | Applied discount amount.       |
 | redeemed_at     | datetime | Not null       | Redemption timestamp.          |
 
-## 4.15 `orders`
+## 4.17 `orders`
 
 Stores order headers and delivery snapshot.
 
@@ -566,7 +604,7 @@ Stores order headers and delivery snapshot.
 | created_at       | datetime | Not null                 | Creation timestamp.                                          |
 | updated_at       | datetime | Not null                 | Last update timestamp.                                       |
 
-## 4.16 `order_items`
+## 4.18 `order_items`
 
 Stores purchased items and price snapshots.
 
@@ -582,7 +620,7 @@ Stores purchased items and price snapshots.
 | total_price           | decimal  | Not null       | Unit price multiplied by quantity. |
 | created_at            | datetime | Not null       | Creation timestamp.                |
 
-## 4.17 `order_status_histories`
+## 4.19 `order_status_histories`
 
 Stores order status changes.
 
@@ -596,7 +634,7 @@ Stores order status changes.
 | note               | text     | Nullable              | Status change note.    |
 | created_at         | datetime | Not null              | Change timestamp.      |
 
-## 4.18 `payments`
+## 4.20 `payments`
 
 Stores payment records for orders.
 
@@ -613,7 +651,7 @@ Stores payment records for orders.
 | created_at          | datetime | Not null     | Creation timestamp.                             |
 | updated_at          | datetime | Not null     | Last update timestamp.                          |
 
-## 4.19 `payment_transactions`
+## 4.21 `payment_transactions`
 
 Stores payment transaction records.
 
@@ -628,7 +666,7 @@ Stores payment transaction records.
 | raw_payload             | json     | Nullable         | Gateway payload for audit/debug. |
 | created_at              | datetime | Not null         | Creation timestamp.              |
 
-## 4.20 `payment_webhook_events`
+## 4.22 `payment_webhook_events`
 
 Stores received webhook events for idempotent payment processing.
 
@@ -644,7 +682,7 @@ Stores received webhook events for idempotent payment processing.
 | received_at       | datetime | Not null                 | Webhook received timestamp.           |
 | processed_at      | datetime | Nullable                 | Processing timestamp.                 |
 
-## 4.21 `audit_logs`
+## 4.23 `audit_logs`
 
 Stores important admin and system actions.
 
@@ -669,9 +707,11 @@ Stores important admin and system actions.
 | users to sessions                  | One-to-many  | A user can own multiple sessions.                                                |
 | users to addresses                 | One-to-many  | A customer can store multiple delivery addresses.                                |
 | categories to products             | One-to-many  | A category contains many products.                                               |
+| categories to voucher_categories   | One-to-many  | A category can be targeted by multiple category-scoped vouchers.                 |
 | products to product_images         | One-to-many  | A product can have multiple images.                                              |
 | products to inventory_items        | One-to-one   | Each product has one inventory record.                                           |
 | products to inventory_movements    | One-to-many  | Each product can have many stock movements.                                      |
+| products to voucher_products       | One-to-many  | A product can be targeted by multiple product-scoped vouchers.                   |
 | users to carts                     | One-to-many  | A user may have multiple carts over time, but only one active cart should exist. |
 | carts to cart_items                | One-to-many  | A cart contains multiple cart items.                                             |
 | products to cart_items             | One-to-many  | A product can appear in multiple carts.                                          |
@@ -680,6 +720,8 @@ Stores important admin and system actions.
 | orders to payments                 | One-to-many  | An order can have one or more payment attempts.                                  |
 | payments to payment_transactions   | One-to-many  | A payment can have multiple gateway transactions.                                |
 | payments to payment_webhook_events | One-to-many  | A payment can receive multiple webhook events.                                   |
+| vouchers to voucher_products       | One-to-many  | A product-scoped voucher can target multiple products.                           |
+| vouchers to voucher_categories     | One-to-many  | A category-scoped voucher can target multiple categories.                        |
 | vouchers to voucher_redemptions    | One-to-many  | A voucher can be redeemed multiple times within limits.                          |
 
 ---
@@ -697,6 +739,8 @@ Stores important admin and system actions.
 | products               | slug                    | Unique product URL.                               |
 | inventory_items        | product_id              | Enforce one inventory item per product.           |
 | vouchers               | code                    | Prevent duplicate voucher code.                   |
+| voucher_products       | voucher_id, product_id  | Prevent duplicate product mapping per voucher.    |
+| voucher_categories     | voucher_id, category_id | Prevent duplicate category mapping per voucher.   |
 | orders                 | order_number            | Unique public order reference.                    |
 | payment_transactions   | external_transaction_id | Prevent duplicate gateway transaction processing. |
 | payment_webhook_events | external_event_id       | Ensure webhook idempotency.                       |
@@ -710,6 +754,8 @@ Stores important admin and system actions.
 | products               | category_id, status, approval_status | Product listing and filtering. |
 | products               | price                                | Price filtering and sorting.   |
 | cart_items             | cart_id                              | Cart lookup.                   |
+| voucher_products       | product_id                           | Voucher lookup by product.     |
+| voucher_categories     | category_id                          | Voucher lookup by category.    |
 | orders                 | user_id, created_at                  | Customer order history.        |
 | orders                 | status                               | Admin order filtering.         |
 | orders                 | payment_status                       | Payment status filtering.      |
@@ -752,7 +798,10 @@ Stores important admin and system actions.
 1. Voucher code must be unique.
 2. Voucher must be active and within valid time range.
 3. Voucher usage must not exceed global or per-user limits.
-4. Voucher redemption should be linked to the final order.
+4. `order` scoped vouchers apply to the whole cart and do not require product or category mapping rows.
+5. `product` scoped vouchers must have at least one row in `voucher_products` and only apply to those products.
+6. `category` scoped vouchers must have at least one row in `voucher_categories` and only apply to products in those categories.
+7. Voucher redemption should be linked to the final order.
 
 ## 7.6 Order Rules
 
@@ -797,6 +846,14 @@ Stores important admin and system actions.
 | pending  | Product is waiting for approval.        |
 | approved | Product is approved for public display. |
 | rejected | Product is rejected.                    |
+
+### Voucher Scope
+
+| Value    | Meaning                                      |
+| :------- | :------------------------------------------- |
+| order    | Voucher applies to the whole cart.           |
+| product  | Voucher applies only to mapped products.     |
+| category | Voucher applies only to mapped categories.   |
 
 ### Order Status
 

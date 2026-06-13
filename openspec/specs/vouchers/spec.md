@@ -8,13 +8,38 @@ Define voucher validation, discount calculation, usage limits, and redemption li
 
 ### Requirement: Voucher validation
 
-The system SHALL validate voucher code, status, dates, order amount, and usage limits before applying a discount.
+The system SHALL validate voucher code, status, dates, order amount, scope applicability, and usage limits before applying a discount.
 
 #### Scenario: Voucher is valid
 
 - GIVEN a voucher is active, currently valid, meets minimum amount, and has remaining usage
+- AND the cart satisfies the voucher scope
 - WHEN a customer applies the code during checkout
 - THEN the system calculates the discount and returns updated totals.
+
+### Requirement: Voucher scope applicability
+
+The system SHALL support order-wide, product-specific, and category-specific voucher scopes.
+
+#### Scenario: Order scoped voucher
+
+- GIVEN a voucher has `ORDER` scope
+- WHEN a customer applies the voucher
+- THEN the system applies the discount to the eligible order amount without requiring voucher product or category mappings.
+
+#### Scenario: Product scoped voucher
+
+- GIVEN a voucher has `PRODUCT` scope
+- AND the voucher has at least one `voucher_products` mapping
+- WHEN a customer's cart contains mapped and unmapped products
+- THEN the system calculates the discount only from mapped products.
+
+#### Scenario: Category scoped voucher
+
+- GIVEN a voucher has `CATEGORY` scope
+- AND the voucher has at least one `voucher_categories` mapping
+- WHEN a customer's cart contains products from mapped and unmapped categories
+- THEN the system calculates the discount only from products in mapped categories.
 
 ### Requirement: Active and time validity
 

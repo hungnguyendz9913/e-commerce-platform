@@ -1002,7 +1002,7 @@ Customer
 1. The customer enters a voucher code.
 2. The customer submits the voucher.
 3. The system validates the voucher code.
-4. The system checks voucher expiration, usage limit, eligibility, and order constraints.
+4. The system checks voucher expiration, usage limit, order/product/category scope eligibility, and order constraints.
 5. The system calculates the discount.
 6. The system applies the discount to the cart or checkout total.
 7. The system displays the updated total.
@@ -1049,7 +1049,7 @@ Customer
 2. Check active status.
 3. Check expiration date.
 4. Check minimum order value.
-5. Check applicable products or categories.
+5. Check the voucher scope: order-wide, applicable products, or applicable categories.
 6. Check customer eligibility.
 7. Check global and per-customer usage limits.
 
