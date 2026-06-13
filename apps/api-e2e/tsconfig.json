@@ -15,9 +15,6 @@
       "path": "../../libs/api/common"
     },
     {
-      "path": "../../libs/api/contracts"
-    },
-    {
       "path": "../api"
     },
     {

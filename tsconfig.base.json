@@ -16,6 +16,13 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@e-commerce-platform/source"]
+    "customConditions": ["@e-commerce-platform/source"],
+    "paths": {
+      "@e-commerce-platform/api-common": ["./libs/api/common/src/index.ts"],
+      "@e-commerce-platform/api-contracts": ["./libs/api/contracts/src/index.ts"],
+      "@e-commerce-platform/database": ["./libs/infrastructure/database/src/index.ts"],
+      "@e-commerce-platform/types": ["./libs/shared/types/src/index.ts"],
+      "@e-commerce-platform/utils": ["./libs/shared/utils/src/index.ts"]
+    }
   }
 }
