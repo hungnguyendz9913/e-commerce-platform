@@ -31,6 +31,6 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Run `npx nx e2e api-e2e` and fix any product E2E failures.
+- [x] 6.1 Run `npx nx e2e api-e2e` and fix any product E2E failures.
 - [x] 6.2 Run relevant lint or typecheck command for `api-e2e` if available.
 - [x] 6.3 Validate the OpenSpec change with `openspec validate test-products-e2e --strict`.

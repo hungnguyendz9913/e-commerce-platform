@@ -1,8 +1,3 @@
-import {
-  ProductApprovalStatus,
-  ProductStatus,
-} from '@e-commerce-platform/api-contracts';
-
 export const productIds = {
   visible: '11111111-1111-4111-8111-111111111111',
   hidden: '22222222-2222-4222-8222-222222222222',
@@ -79,8 +74,8 @@ export const createProductPayloadFixture = {
   slug: 'wireless-keyboard',
   description: 'Compact wireless keyboard.',
   price: 350000,
-  status: ProductStatus.ACTIVE,
-  approvalStatus: ProductApprovalStatus.APPROVED,
+  status: 'ACTIVE',
+  approvalStatus: 'APPROVED',
   images: [
     {
       imageUrl: primaryImageFixture.imageUrl,
@@ -99,7 +94,7 @@ export const updateProductPayloadFixture = {
   name: 'Wireless Keyboard Pro',
   description: 'Updated description.',
   price: 420000,
-  status: ProductStatus.ACTIVE,
+  status: 'ACTIVE',
 };
 
 export const updatedAdminProductDetailFixture = {
