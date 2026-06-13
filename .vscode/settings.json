@@ -1,0 +1,12 @@
+{
+  "typescript.preferences.importModuleSpecifier": "shortest",
+  "typescript.preferences.importModuleSpecifierEnding": "minimal",
+  "typescript.preferences.autoImportFileExcludePatterns": [
+    "**/libs/**/src/lib/**"
+  ],
+  "javascript.preferences.importModuleSpecifier": "shortest",
+  "javascript.preferences.importModuleSpecifierEnding": "minimal",
+  "javascript.preferences.autoImportFileExcludePatterns": [
+    "**/libs/**/src/lib/**"
+  ]
+}
