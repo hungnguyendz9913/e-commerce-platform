@@ -170,10 +170,56 @@ describe('ProductsService', () => {
         take: 10,
         orderBy: { price: 'asc' },
         where: expect.objectContaining({
+          OR: [
+            { name: { contains: 'test', mode: 'insensitive' } },
+            { sku: { contains: 'test', mode: 'insensitive' } },
+            { slug: { contains: 'test', mode: 'insensitive' } },
+          ],
           categoryId: 'category-id',
           status: 'ACTIVE',
           approvalStatus: 'APPROVED',
+          price: {
+            gte: 1,
+            lte: 200,
+          },
+          inventoryItem: {
+            is: {
+              stockQuantity: {
+                gt: 0,
+              },
+            },
+          },
         }),
+      }),
+    );
+  });
+
+  it('should return admin detail for products regardless of public visibility', async () => {
+    const { databaseService, rawDatabaseService } = createDatabaseMock();
+    rawDatabaseService.product.findUnique.mockResolvedValue(
+      productFixture({
+        status: 'INACTIVE',
+        approvalStatus: 'REJECTED',
+      }),
+    );
+    const { service } = createService(databaseService, {});
+
+    await expect(service.getAdminProduct('product-id')).resolves.toMatchObject({
+      data: {
+        id: 'product-id',
+        sku: 'SKU-1',
+        status: 'inactive',
+        approvalStatus: 'rejected',
+        stockQuantity: 5,
+        reservedQuantity: 1,
+        createdAt: createdAt.toISOString(),
+        updatedAt: updatedAt.toISOString(),
+        images: [{ id: 'image-id' }],
+      },
+    });
+    expect(rawDatabaseService.product.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'product-id' },
       }),
     );
   });
@@ -278,6 +324,23 @@ describe('ProductsService', () => {
     expect(transaction.product.create).not.toHaveBeenCalled();
   });
 
+  it('should reject inactive categories during create', async () => {
+    const { databaseService, transaction } = createDatabaseMock();
+    transaction.category.findFirst.mockResolvedValue(null);
+    const { service } = createService(databaseService, transaction);
+
+    await expect(
+      service.createProduct({
+        sku: 'SKU-1',
+        name: 'Test Product',
+        slug: 'test-product',
+        price: 100,
+        categoryId: 'inactive-category-id',
+      }),
+    ).rejects.toThrow(NotFoundException);
+    expect(transaction.product.create).not.toHaveBeenCalled();
+  });
+
   it('should update partial product fields, replace images, and delegate inventory update', async () => {
     const { databaseService, transaction } = createDatabaseMock();
     transaction.product.findUnique
@@ -355,6 +418,41 @@ describe('ProductsService', () => {
     );
   });
 
+  it('should update only provided product fields without replacing images or inventory when omitted', async () => {
+    const { databaseService, transaction } = createDatabaseMock();
+    transaction.product.update.mockResolvedValue(
+      productFixture({
+        name: 'Name Only',
+      }),
+    );
+    const { service, inventoryService } = createService(
+      databaseService,
+      transaction,
+    );
+
+    await expect(
+      service.updateProduct('product-id', {
+        name: 'Name Only',
+      }),
+    ).resolves.toMatchObject({
+      data: {
+        name: 'Name Only',
+      },
+    });
+    expect(transaction.product.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'product-id' },
+        data: expect.objectContaining({
+          name: 'Name Only',
+          images: undefined,
+        }),
+      }),
+    );
+    expect(
+      inventoryService.updateProductInventoryFromAdminProduct,
+    ).not.toHaveBeenCalled();
+  });
+
   it('should hard-delete products without protected references', async () => {
     const { databaseService, rawDatabaseService } = createDatabaseMock();
     rawDatabaseService.product.findUnique.mockResolvedValue({
@@ -413,7 +511,27 @@ describe('ProductsService', () => {
     const { databaseService, rawDatabaseService } = createDatabaseMock();
     const { service } = createService(databaseService, {});
 
-    await service.listPublicProducts({});
+    const result = await service.listPublicProducts({});
+
+    expect(result).toMatchObject({
+      data: [
+        {
+          id: 'product-id',
+          name: 'Test Product',
+          slug: 'test-product',
+          price: '100.00',
+          category: { id: 'category-id' },
+          primaryImage: { id: 'image-id' },
+          inStock: true,
+        },
+      ],
+      meta: {
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      },
+    });
 
     expect(rawDatabaseService.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -423,6 +541,8 @@ describe('ProductsService', () => {
         }),
       }),
     );
+    expect(result.data[0]).not.toHaveProperty('sku');
+    expect(result.data[0]).not.toHaveProperty('approvalStatus');
   });
 
   it('should hide inactive, archived, pending, and rejected product details', async () => {

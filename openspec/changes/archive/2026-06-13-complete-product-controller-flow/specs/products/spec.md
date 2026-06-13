@@ -1,10 +1,4 @@
-# Products Specification
-
-## Purpose
-
-Define public product catalog behavior and admin product management expectations.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Public product listing
 
@@ -23,17 +17,6 @@ The system SHALL expose a public paginated product listing through `GET /product
 - WHEN `GET /products` is called
 - THEN the controller passes the parsed product list query DTO to the public product listing service method
 - AND the response uses public product summary fields.
-
-### Requirement: Search, filter, sort, and paginate products
-
-The system SHALL support product search, filtering, sorting, and pagination.
-
-#### Scenario: Filtered product search
-
-- GIVEN visible products exist across categories, prices, and stock states
-- WHEN a user supplies `q`, category, price, stock, sort, page, and limit parameters
-- THEN the system returns products matching the supported filters
-- AND orders and paginates results consistently.
 
 ### Requirement: Product detail
 

@@ -151,6 +151,6 @@ export class ProductsRepository {
       include: {
         inventoryItem: true,
       },
-    })
+    });
   }
 }
