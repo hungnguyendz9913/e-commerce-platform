@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '@e-commerce-platform/database';
 import { InventoryRepository } from './inventory.repository';
 import { InventoryService } from './inventory.service';
@@ -8,6 +8,8 @@ function createInventoryService() {
     inventoryItem: {
       create: jest.fn().mockResolvedValue({ id: 'inventory-id' }),
       upsert: jest.fn().mockResolvedValue({ id: 'inventory-id' }),
+      findUnique: jest.fn(),
+      update: jest.fn(),
     },
     inventoryMovement: {
       create: jest.fn(),
@@ -183,6 +185,83 @@ describe('InventoryService', () => {
         reservedQuantity: 1,
       },
     });
+    expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
+  });
+
+  it('should restore stock and record cancellation movement for canceled order items', async () => {
+    const { service, transaction } = createInventoryService();
+    transaction.inventoryItem.findUnique.mockResolvedValue({
+      productId: 'product-id',
+      stockQuantity: 3,
+    });
+    transaction.inventoryItem.update.mockResolvedValue({
+      productId: 'product-id',
+      stockQuantity: 5,
+    });
+
+    await service.restoreStockForCanceledOrder(
+      {
+        id: '11111111-1111-4111-8111-111111111111',
+        items: [
+          {
+            productId: 'product-id',
+            quantity: 2,
+          },
+        ],
+      },
+      transaction as never,
+    );
+
+    expect(transaction.inventoryItem.findUnique).toHaveBeenCalledWith({
+      where: {
+        productId: 'product-id',
+      },
+    });
+    expect(transaction.inventoryItem.update).toHaveBeenCalledWith({
+      where: {
+        productId: 'product-id',
+      },
+      data: {
+        stockQuantity: {
+          increment: 2,
+        },
+        version: {
+          increment: 1,
+        },
+      },
+    });
+    expect(transaction.inventoryMovement.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        productId: 'product-id',
+        movementType: 'CANCELLATION',
+        quantity: 2,
+        beforeQuantity: 3,
+        afterQuantity: 5,
+        reason: 'Order canceled',
+        referenceId: '11111111-1111-4111-8111-111111111111',
+      }),
+    });
+  });
+
+  it('should reject canceled order stock restoration when inventory item is missing', async () => {
+    const { service, transaction } = createInventoryService();
+    transaction.inventoryItem.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.restoreStockForCanceledOrder(
+        {
+          id: '11111111-1111-4111-8111-111111111111',
+          items: [
+            {
+              productId: 'product-id',
+              quantity: 2,
+            },
+          ],
+        },
+        transaction as never,
+      ),
+    ).rejects.toThrow(NotFoundException);
+    expect(transaction.inventoryItem.update).not.toHaveBeenCalled();
     expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
   });
 });
