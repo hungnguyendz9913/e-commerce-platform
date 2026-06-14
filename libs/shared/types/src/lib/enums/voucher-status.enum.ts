@@ -1,7 +1,7 @@
 export const VoucherStatus = {
-  ACTIVE: 'active',
-  INACTIVE: 'inactive',
-  EXPIRED: 'expired',
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  EXPIRED: 'EXPIRED',
 } as const;
 
 export type VoucherStatus = (typeof VoucherStatus)[keyof typeof VoucherStatus];

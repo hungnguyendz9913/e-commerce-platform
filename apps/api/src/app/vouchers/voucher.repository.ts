@@ -1,10 +1,11 @@
-import { DatabaseService } from '@e-commerce-platform/database';
+import { DatabaseService, Prisma } from '@e-commerce-platform/database';
 import {
   CreateVoucherDto,
   FindVouchersQueryDto,
   UpdateVoucherDto,
 } from '@e-commerce-platform/api-contracts';
 import { Injectable } from '@nestjs/common';
+import { VoucherScope, VoucherStatus } from '@e-commerce-platform/types';
 
 @Injectable()
 export class VoucherRepository {
@@ -15,19 +16,19 @@ export class VoucherRepository {
 
     return this.databaseService.voucher.findMany({
       where: {
-        status: 'ACTIVE',
+        status: VoucherStatus.ACTIVE,
         AND: [
           {
-            OR: [
-              { expiresAt: null },
-              { expiresAt: { gte: now } },
-            ],
+            OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+          },
+          {
+            OR: [{ expiresAt: null }, { expiresAt: { gte: now } }],
           },
           {
             OR: [
-              { scope: 'ORDER' },
+              { scope: VoucherScope.ORDER },
               {
-                scope: 'PRODUCT',
+                scope: VoucherScope.PRODUCT,
                 products: { some: { productId } },
               },
             ],
@@ -37,25 +38,25 @@ export class VoucherRepository {
     });
   }
 
-  findActiveVoucherForCategory(categoryId: string) {
+  findActiveVoucherForCategory(productId: string) {
     const now = new Date();
 
     return this.databaseService.voucher.findMany({
       where: {
-        status: 'ACTIVE',
+        status: VoucherStatus.ACTIVE,
         AND: [
           {
-            OR: [
-              { expiresAt: null },
-              { expiresAt: { gte: now } },
-            ],
+            OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+          },
+          {
+            OR: [{ expiresAt: null }, { expiresAt: { gte: now } }],
           },
           {
             OR: [
-              { scope: 'ORDER' },
+              { scope: VoucherScope.ORDER },
               {
-                scope: 'CATEGORY',
-                categories: { some: { categoryId } },
+                scope: VoucherScope.CATEGORY,
+                products: { some: { productId } },
               },
             ],
           },
@@ -65,8 +66,25 @@ export class VoucherRepository {
   }
 
   createVoucher(createVoucherDto: CreateVoucherDto) {
+    const data: Prisma.VoucherCreateInput = {
+      code: createVoucherDto.code,
+      discountType: createVoucherDto.discountType,
+      discountValue: createVoucherDto.discountValue,
+
+      minimumOrderAmount: createVoucherDto.minimumOrderAmount ?? null,
+      maximumDiscountAmount: createVoucherDto.maximumDiscountAmount ?? null,
+      usageLimit: createVoucherDto.usageLimit ?? null,
+      perUserLimit: createVoucherDto.perUserLimit ?? null,
+
+      startsAt: createVoucherDto.startsAt ?? null,
+      expiresAt: createVoucherDto.expiresAt ?? null,
+
+      status: createVoucherDto.status,
+      scope: createVoucherDto.scope,
+    };
+
     return this.databaseService.voucher.create({
-      data: createVoucherDto as never,
+      data
     });
   }
 
@@ -109,16 +127,33 @@ export class VoucherRepository {
   }
 
   updateVoucher(voucherId: string, updateVoucherDto: UpdateVoucherDto) {
+    const data: Prisma.VoucherUpdateInput = {
+      code: updateVoucherDto.code,
+      discountType: updateVoucherDto.discountType,
+      discountValue: updateVoucherDto.discountValue,
+
+      minimumOrderAmount: updateVoucherDto.minimumOrderAmount,
+      maximumDiscountAmount: updateVoucherDto.maximumDiscountAmount,
+      usageLimit: updateVoucherDto.usageLimit,
+      perUserLimit: updateVoucherDto.perUserLimit,
+
+      startsAt: updateVoucherDto.startsAt,
+      expiresAt: updateVoucherDto.expiresAt,
+
+      status: updateVoucherDto.status,
+      scope: updateVoucherDto.scope,
+    };
+
     return this.databaseService.voucher.update({
       where: { id: voucherId },
-      data: updateVoucherDto as never,
+      data,
     });
   }
 
   deactivateVoucher(voucherId: string) {
     return this.databaseService.voucher.update({
       where: { id: voucherId },
-      data: { status: 'INACTIVE' },
+      data: { status: VoucherStatus.INACTIVE },
     });
   }
 }

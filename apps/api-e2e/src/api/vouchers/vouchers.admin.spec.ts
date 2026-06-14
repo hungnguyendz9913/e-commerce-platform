@@ -175,7 +175,7 @@ test.describe('Admin vouchers API', () => {
     expect(body.data).toEqual(
       expect.objectContaining({
         id: voucherIds.active,
-        status: 'inactive',
+        status: 'INACTIVE',
       }),
     );
     expect(voucherService.deactivateVoucher.calls).toEqual([

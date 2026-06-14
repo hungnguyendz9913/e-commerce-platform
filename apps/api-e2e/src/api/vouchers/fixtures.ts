@@ -14,7 +14,7 @@ export const categoryIds = {
 export const activeVoucherFixture = {
   id: voucherIds.active,
   code: 'SALE10',
-  discountType: 'percent',
+  discountType: 'PERCENT',
   discountValue: 10,
   minimumOrderAmount: 100000,
   maximumDiscountAmount: 50000,
@@ -22,19 +22,19 @@ export const activeVoucherFixture = {
   perUserLimit: 1,
   startsAt: '2026-01-01T00:00:00.000Z',
   expiresAt: '2026-12-31T23:59:59.000Z',
-  status: 'active',
-  scope: 'product',
+  status: 'ACTIVE',
+  scope: 'PRODUCT',
 };
 
 export const inactiveVoucherFixture = {
   ...activeVoucherFixture,
   id: voucherIds.inactive,
-  status: 'inactive',
+  status: 'INACTIVE',
 };
 
 export const createVoucherPayloadFixture = {
   code: 'SUMMER25',
-  discountType: 'percent',
+  discountType: 'PERCENT',
   discountValue: 25,
   minimumOrderAmount: 200000,
   maximumDiscountAmount: 100000,
@@ -42,8 +42,8 @@ export const createVoucherPayloadFixture = {
   perUserLimit: 1,
   startsAt: '2026-06-01T00:00:00.000Z',
   expiresAt: '2026-07-01T00:00:00.000Z',
-  status: 'active',
-  scope: 'order',
+  status: 'ACTIVE',
+  scope: 'ORDER',
 };
 
 export const createdVoucherFixture = {
@@ -75,12 +75,12 @@ export const updatedVoucherFixture = {
 
 export const voucherQueryFixture = {
   q: 'sale',
-  status: 'active',
-  scope: 'product',
+  status: 'ACTIVE',
+  scope: 'PRODUCT',
   page: 1,
   limit: 20,
-  sortBy: 'createdAt',
-  sortOrder: 'desc',
+  sortBy: 'CREATED_AT',
+  sortOrder: 'DESC',
 };
 
 export const paginationMetaFixture = {

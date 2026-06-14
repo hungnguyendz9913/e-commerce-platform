@@ -1,7 +1,7 @@
 export const VoucherScope = {
-  ORDER: 'order',
-  PRODUCT: 'product',
-  CATEGORY: 'category',
+  ORDER: 'ORDER',
+  PRODUCT: 'PRODUCT',
+  CATEGORY: 'CATEGORY',
 } as const;
 
 export type VoucherScope = (typeof VoucherScope)[keyof typeof VoucherScope];
