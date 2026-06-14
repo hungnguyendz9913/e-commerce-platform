@@ -10,6 +10,8 @@ import {
   Max,
   MaxLength,
   Min,
+  IsArray,
+  IsUUID
 } from 'class-validator';
 import { DiscountType, VoucherScope, VoucherStatus } from './voucher.enums.js';
 
@@ -69,4 +71,14 @@ export class CreateVoucherDto {
   @IsOptional()
   @IsEnum(VoucherScope)
   scope?: VoucherScope;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  productIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  categoryIds?: string[];
 }

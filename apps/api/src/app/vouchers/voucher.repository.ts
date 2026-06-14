@@ -38,7 +38,7 @@ export class VoucherRepository {
     });
   }
 
-  findActiveVoucherForCategory(productId: string) {
+  findActiveVoucherForCategory(categoryId: string) {
     const now = new Date();
 
     return this.databaseService.voucher.findMany({
@@ -56,7 +56,7 @@ export class VoucherRepository {
               { scope: VoucherScope.ORDER },
               {
                 scope: VoucherScope.CATEGORY,
-                products: { some: { productId } },
+                categories: { some: { categoryId } }
               },
             ],
           },
@@ -65,26 +65,27 @@ export class VoucherRepository {
     });
   }
 
-  createVoucher(createVoucherDto: CreateVoucherDto) {
-    const data: Prisma.VoucherCreateInput = {
-      code: createVoucherDto.code,
-      discountType: createVoucherDto.discountType,
-      discountValue: createVoucherDto.discountValue,
-
-      minimumOrderAmount: createVoucherDto.minimumOrderAmount ?? null,
-      maximumDiscountAmount: createVoucherDto.maximumDiscountAmount ?? null,
-      usageLimit: createVoucherDto.usageLimit ?? null,
-      perUserLimit: createVoucherDto.perUserLimit ?? null,
-
-      startsAt: createVoucherDto.startsAt ?? null,
-      expiresAt: createVoucherDto.expiresAt ?? null,
-
-      status: createVoucherDto.status,
-      scope: createVoucherDto.scope,
-    };
+  async createVoucher(createVoucherDto: CreateVoucherDto) {
+    const { productIds, categoryIds, ...voucherData } = createVoucherDto;
 
     return this.databaseService.voucher.create({
-      data
+      data: {
+        ...voucherData,
+        products: productIds?.length
+          ? {
+              create: productIds.map((productId) => ({ productId })),
+            }
+          : undefined,
+        categories: categoryIds?.length
+          ? {
+              create: categoryIds.map((categoryId) => ({ categoryId })),
+            }
+          : undefined,
+      },
+      include: {
+        products: true,
+        categories: true,
+      },
     });
   }
 
