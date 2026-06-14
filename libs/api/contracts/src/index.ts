@@ -36,3 +36,7 @@ export * from './lib/vouchers/create-voucher.dto.js';
 export * from './lib/vouchers/find-vouchers-query.dto.js';
 export * from './lib/vouchers/update-voucher.dto.js';
 export * from './lib/vouchers/voucher.enums.js';
+
+// Orders
+export * from './lib/orders/list-orders-query.dto.js';
+export * from './lib/orders/cancel-order.dto.js';

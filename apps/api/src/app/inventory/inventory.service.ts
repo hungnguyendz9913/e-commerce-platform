@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DbClient } from '@e-commerce-platform/database';
 import { ProductInventoryDto } from '@e-commerce-platform/api-contracts';
 import { InventoryRepository } from './inventory.repository';
+import { InventoryMovementType } from '@e-commerce-platform/types';
 
 type ProductInventory = {
   stockQuantity: number;
@@ -103,6 +104,51 @@ export class InventoryService {
       inventory.reservedQuantity > inventory.stockQuantity
     ) {
       throw new BadRequestException('Invalid inventory quantities');
+    }
+  }
+
+  async restoreStockForCanceledOrder(
+    order: {
+      id: string;
+      items: {
+        productId: string;
+        quantity: number;
+      }[];
+    },
+    client: DbClient,
+  ) {
+    for (const item of order.items) {
+      const inventoryItem =
+        await this.inventoryRepository.findInventoryItemByProductId(
+          item.productId,
+          client,
+        );
+
+      if (!inventoryItem) {
+        throw new NotFoundException('Inventory item not found');
+      }
+
+      const beforeQuantity = inventoryItem.stockQuantity;
+      const afterQuantity = beforeQuantity + item.quantity;
+
+      await this.inventoryRepository.increaseStock(
+        item.productId,
+        item.quantity,
+        client,
+      );
+
+      await this.inventoryRepository.createInventoryMovement(
+        {
+          productId: item.productId,
+          movementType: InventoryMovementType.CANCELLATION,
+          quantity: item.quantity,
+          beforeQuantity,
+          afterQuantity,
+          reason: 'Order canceled',
+          referenceId: order.id,
+        },
+        client,
+      );
     }
   }
 }
