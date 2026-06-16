@@ -59,6 +59,16 @@ export class InventoryRepository {
     });
   }
 
+  async decreaseStock(productId: string, quantity: number, client: DbClient) {
+    return client.inventoryItem.update({
+      where: { productId },
+      data: {
+        stockQuantity: { decrement: quantity },
+        version: { increment: 1 },
+      },
+    });
+  }
+
   async createCancellationMovement(
     data: {
       productId: string;

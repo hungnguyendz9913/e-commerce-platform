@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { DbClient } from '@e-commerce-platform/database';
 import { ProductInventoryDto } from '@e-commerce-platform/api-contracts';
 import { InventoryRepository } from './inventory.repository';
@@ -105,6 +105,51 @@ export class InventoryService {
     ) {
       throw new BadRequestException('Invalid inventory quantities');
     }
+  }
+
+  async deductStockForCheckout(
+    productId: string,
+    quantity: number,
+    orderId: string,
+    client: DbClient,
+  ) {
+    const inventoryItem =
+      await this.inventoryRepository.findInventoryItemByProductId(
+        productId,
+        client,
+      );
+
+    if (!inventoryItem) {
+      throw new NotFoundException('Inventory item not found');
+    }
+
+    const availableStock =
+      inventoryItem.stockQuantity - inventoryItem.reservedQuantity;
+
+    if (availableStock < quantity) {
+      throw new UnprocessableEntityException({
+        code: 'BUSINESS_RULE_VIOLATION',
+        message: `Insufficient stock for product ${productId}. Available: ${availableStock}, requested: ${quantity}.`,
+      });
+    }
+
+    const beforeQuantity = inventoryItem.stockQuantity;
+    const afterQuantity = beforeQuantity - quantity;
+
+    await this.inventoryRepository.decreaseStock(productId, quantity, client);
+
+    await this.inventoryRepository.createInventoryMovement(
+      {
+        productId,
+        movementType: InventoryMovementType.SALE,
+        quantity,
+        beforeQuantity,
+        afterQuantity,
+        reason: 'Checkout order',
+        referenceId: orderId,
+      },
+      client,
+    );
   }
 
   async restoreStockForCanceledOrder(

@@ -8,6 +8,7 @@ import { CategoryModule } from './categories/category.module';
 import { CartModule } from './carts/cart.module';
 import { VoucherModule } from './vouchers/voucher.module';
 import { OrderModule } from './orders/order.module';
+import { CheckoutModule } from './checkout/checkout.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { OrderModule } from './orders/order.module';
     CartModule,
     VoucherModule,
     OrderModule,
+    CheckoutModule,
   ],
   controllers: [AppController],
   providers: [AppService],
