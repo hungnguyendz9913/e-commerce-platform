@@ -57,6 +57,17 @@ The cart API E2E suite SHALL verify that invalid cart command payloads are rejec
 - **THEN** the suite MUST verify that the API returns a validation error
 - **AND** it MUST verify that the cart service is not called for the invalid request.
 
+### Requirement: Cart API E2E tests enforce stock limits
+The cart API E2E suite SHALL verify that the API enforces stock limits when adding or updating cart items.
+
+#### Scenario: Add item rejects quantity exceeding stock
+- **WHEN** an authenticated customer calls `POST /cart/items` with a quantity greater than the available stock
+- **THEN** the suite MUST verify that the API rejects the request due to stock limits (e.g. business rule violation).
+
+#### Scenario: Update item rejects quantity exceeding stock
+- **WHEN** an authenticated customer calls `PATCH /cart/items/{itemId}` with a quantity greater than the available stock
+- **THEN** the suite MUST verify that the API rejects the request due to stock limits.
+
 ### Requirement: Cart API E2E files are organized for maintainability
 The API E2E project SHALL keep cart API tests, fixtures, service mocks, and assertions in a dedicated cart API test area.
 

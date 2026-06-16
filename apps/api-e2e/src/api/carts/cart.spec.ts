@@ -1,6 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import type { APIRequestContext } from '@playwright/test';
 import { expect, test } from '@playwright/test';
+import { BadRequestException } from '@nestjs/common';
 import {
   adminHeaders,
   customerHeaders,
@@ -236,4 +237,40 @@ test.describe('Cart API', () => {
       expect(cartService.updateCartItemQuantity.calls).toEqual([]);
     });
   }
+
+  test('POST /cart/items rejects when quantity exceeds available stock', async () => {
+    cartService.addItemToCart.mockRejectedValue(new BadRequestException('Insufficient stock'));
+
+    const response = await api.post('/api/cart/items', {
+      headers: customerHeaders,
+      data: addCartItemPayloadFixture,
+    });
+    const body = await response.json();
+
+    expect(response.status()).toBe(400);
+    expect(body.message).toContain('Insufficient stock');
+    expect(cartService.addItemToCart.calls).toEqual([
+      ['customer-id', expect.objectContaining(addCartItemPayloadFixture)],
+    ]);
+  });
+
+  test('PATCH /cart/items/{itemId} rejects when updated quantity exceeds available stock', async () => {
+    cartService.updateCartItemQuantity.mockRejectedValue(new BadRequestException('Insufficient stock'));
+
+    const response = await api.patch(`/api/cart/items/${cartIds.item}`, {
+      headers: customerHeaders,
+      data: updateCartItemQuantityPayloadFixture,
+    });
+    const body = await response.json();
+
+    expect(response.status()).toBe(400);
+    expect(body.message).toContain('Insufficient stock');
+    expect(cartService.updateCartItemQuantity.calls).toEqual([
+      [
+        'customer-id',
+        cartIds.item,
+        expect.objectContaining(updateCartItemQuantityPayloadFixture),
+      ],
+    ]);
+  });
 });
