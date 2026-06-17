@@ -1,10 +1,4 @@
-# Checkout Specification
-
-## Purpose
-
-Define checkout validation, voucher application, delivery information, order creation from cart, and transactional stock deduction.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Validate checkout
 
@@ -97,26 +91,6 @@ The system SHALL create an order from the customer's active cart only after all 
 - WHEN `POST /checkout` is called
 - THEN the system rejects the request with a business rule violation.
 
-### Requirement: Delivery info validation
-
-The system SHALL require valid recipient name, phone, and shipping address for checkout.
-
-#### Scenario: Missing delivery info
-
-- GIVEN checkout delivery information is incomplete or missing required fields
-- WHEN `POST /checkout` or `POST /checkout/validate` is submitted
-- THEN the system rejects the request with a validation error.
-
-### Requirement: Order item snapshot
-
-The system SHALL snapshot productNameSnapshot, skuSnapshot, and unitPriceSnapshot on each order item at the time of checkout.
-
-#### Scenario: Product data changes after checkout
-
-- GIVEN an order is created with item snapshots
-- WHEN the product name, SKU, or price changes afterwards
-- THEN the order items retain the original snapshot values.
-
 ### Requirement: Atomic order creation and stock deduction
 
 The system SHALL create the order, deduct stock, record inventory movements of type SALE, apply voucher redemption if any, and mark the cart checked_out inside a single database transaction.
@@ -133,6 +107,8 @@ The system SHALL create the order, deduct stock, record inventory movements of t
 - WHEN the checkout transaction fails
 - THEN the system rolls back order, order items, inventory changes, voucher redemption, and cart status.
 
+## ADDED Requirements
+
 ### Requirement: Checkout orchestration boundaries
 
 The checkout module SHALL keep route-facing checkout orchestration separate from reusable cart validation, total calculation, order creation mapping, and payment response creation.
@@ -146,13 +122,3 @@ The checkout module SHALL keep route-facing checkout orchestration separate from
 
 - **WHEN** `CheckoutService` handles a checkout request
 - **THEN** cart validation, total calculation, order persistence mapping, and payment payload creation are delegated to focused checkout collaborators.
-
-### Requirement: Cart marked checked_out after success
-
-The system SHALL mark the active cart status as `checked_out` after successful order creation.
-
-#### Scenario: Cart no longer active after checkout
-
-- GIVEN checkout succeeds
-- WHEN the customer retrieves their current cart
-- THEN the previously checked-out cart is not reused for new cart operations.
