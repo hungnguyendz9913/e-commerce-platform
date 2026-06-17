@@ -1,11 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService, DbClient, Prisma } from '@e-commerce-platform/database';
+import {
+  DatabaseService,
+  DbClient,
+  Prisma,
+} from '@e-commerce-platform/database';
 
 @Injectable()
 export class CheckoutRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  findActiveCartWithItems(userId: string, client: DbClient = this.databaseService) {
+  findActiveCartWithItems(
+    userId: string,
+    client: DbClient = this.databaseService,
+  ) {
     return client.cart.findFirst({
       where: {
         userId,
@@ -16,6 +23,7 @@ export class CheckoutRepository {
           include: {
             product: {
               include: {
+                category: true,
                 inventoryItem: true,
               },
             },
