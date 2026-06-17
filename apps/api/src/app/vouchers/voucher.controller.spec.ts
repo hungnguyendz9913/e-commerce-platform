@@ -5,6 +5,7 @@ import {
   PATH_METADATA,
 } from '@nestjs/common/constants';
 import { ROLES_KEY, RolesGuard } from '@e-commerce-platform/api-common';
+import { DiscountType } from '@e-commerce-platform/api-contracts';
 import { Roles as RoleValues } from '@e-commerce-platform/types';
 import { VoucherController } from './voucher.controller';
 import { VoucherService } from './voucher.service';
@@ -81,7 +82,7 @@ describe('VoucherController', () => {
   it('should delegate voucher routes to the service', async () => {
     const createVoucherDto = {
       code: 'SUMMER25',
-      discountType: 'percent',
+      discountType: DiscountType.PERCENT,
       discountValue: 25,
     };
     const updateVoucherDto = {

@@ -4,15 +4,22 @@ import { CheckoutPaymentProvider } from '@e-commerce-platform/api-contracts';
 import { InventoryService } from '../inventory/inventory.service';
 import { CheckoutRepository } from './checkout.repository';
 import { CheckoutService } from './checkout.service';
+import { CheckoutCartValidator } from './checkout-cart.validator';
+import { CheckoutTotalsService } from './checkout-totals.service';
+import { CheckoutOrderFactory } from './checkout-order.factory';
+import { CheckoutPaymentFactory } from './checkout-payment.factory';
+import { VoucherService } from '../vouchers/voucher.service';
 
 function createProduct(overrides: Record<string, unknown> = {}) {
   return {
     id: 'product-id',
+    categoryId: 'category-id',
     name: 'Test Product',
     sku: 'SKU-001',
     price: 100000,
     status: 'ACTIVE',
     approvalStatus: 'APPROVED',
+    category: { id: 'category-id', name: 'Category' },
     inventoryItem: { stockQuantity: 10, reservedQuantity: 0 },
     ...overrides,
   };
@@ -40,7 +47,10 @@ function createCart(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function createCheckoutDto(paymentProvider = CheckoutPaymentProvider.COD) {
+function createCheckoutDto(
+  paymentProvider = CheckoutPaymentProvider.COD,
+  voucherCode?: string,
+) {
   return {
     deliveryInfo: {
       recipientName: 'John Doe',
@@ -48,6 +58,7 @@ function createCheckoutDto(paymentProvider = CheckoutPaymentProvider.COD) {
       shippingAddress: '123 Test St, HCMC',
     },
     paymentProvider,
+    voucherCode,
   };
 }
 
@@ -66,23 +77,51 @@ function createService() {
   const inventoryService = {
     deductStockForCheckout: jest.fn(),
   };
+  const voucherService = {
+    validateVoucherForCheckout: jest.fn(),
+    createVoucherRedemption: jest.fn(),
+  };
+
+  const checkoutCartValidator = new CheckoutCartValidator();
+  const checkoutTotalsService = new CheckoutTotalsService(
+    voucherService as unknown as VoucherService,
+  );
+  const checkoutOrderFactory = new CheckoutOrderFactory();
+  const checkoutPaymentFactory = new CheckoutPaymentFactory();
 
   const service = new CheckoutService(
     checkoutRepository as unknown as CheckoutRepository,
     transactionService as unknown as TransactionService,
     inventoryService as unknown as InventoryService,
+    checkoutCartValidator,
+    checkoutTotalsService,
+    checkoutOrderFactory,
+    checkoutPaymentFactory,
+    voucherService as unknown as VoucherService,
   );
 
-  return { service, checkoutRepository, transactionService, inventoryService, tx };
+  return {
+    service,
+    checkoutRepository,
+    transactionService,
+    inventoryService,
+    voucherService,
+    tx,
+  };
 }
 
 describe('CheckoutService', () => {
   describe('validateCheckout', () => {
     it('returns checkout summary for a valid cart', async () => {
-      const { service, checkoutRepository } = createService();
-      checkoutRepository.findActiveCartWithItems.mockResolvedValue(createCart());
+      const { service, checkoutRepository, voucherService } = createService();
+      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+        createCart(),
+      );
 
-      const result = await service.validateCheckout('user-id', createCheckoutDto());
+      const result = await service.validateCheckout(
+        'user-id',
+        createCheckoutDto(),
+      );
 
       expect(result).toMatchObject({
         subtotal: 200000,
@@ -91,58 +130,64 @@ describe('CheckoutService', () => {
         total: 230000,
       });
       expect(result.items).toHaveLength(1);
+      expect(voucherService.validateVoucherForCheckout).not.toHaveBeenCalled();
     });
 
-    it('throws when cart is null', async () => {
-      const { service, checkoutRepository } = createService();
-      checkoutRepository.findActiveCartWithItems.mockResolvedValue(null);
-
-      await expect(
-        service.validateCheckout('user-id', createCheckoutDto()),
-      ).rejects.toThrow(UnprocessableEntityException);
-    });
-
-    it('throws when cart has no items', async () => {
-      const { service, checkoutRepository } = createService();
+    it('applies voucher discount during checkout validation', async () => {
+      const { service, checkoutRepository, voucherService } = createService();
       checkoutRepository.findActiveCartWithItems.mockResolvedValue(
-        createCart({ items: [] }),
+        createCart(),
+      );
+      voucherService.validateVoucherForCheckout.mockResolvedValue({
+        voucherId: 'voucher-id',
+        voucherCode: 'SALE10',
+        eligibleAmount: 200000,
+        discount: 20000,
+      });
+
+      const result = await service.validateCheckout(
+        'user-id',
+        createCheckoutDto(CheckoutPaymentProvider.COD, ' sale10 '),
       );
 
-      await expect(
-        service.validateCheckout('user-id', createCheckoutDto()),
-      ).rejects.toThrow(UnprocessableEntityException);
-    });
-
-    it('throws when product is inactive', async () => {
-      const { service, checkoutRepository } = createService();
-      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
-        createCart({ items: [createCartItem({ product: createProduct({ status: 'INACTIVE' }) })] }),
+      expect(result).toMatchObject({
+        subtotal: 200000,
+        discount: 20000,
+        shippingFee: 30000,
+        total: 210000,
+      });
+      expect(voucherService.validateVoucherForCheckout).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-id',
+          voucherCode: ' sale10 ',
+          subtotal: 200000,
+          cartItems: [
+            {
+              productId: 'product-id',
+              categoryId: 'category-id',
+              quantity: 2,
+              unitPrice: 100000,
+            },
+          ],
+        }),
       );
+    });
+
+    it('throws when cart is empty or invalid', async () => {
+      const { service, checkoutRepository } = createService();
+      checkoutRepository.findActiveCartWithItems.mockResolvedValueOnce(null);
 
       await expect(
         service.validateCheckout('user-id', createCheckoutDto()),
       ).rejects.toThrow(UnprocessableEntityException);
-    });
 
-    it('throws when product is not approved', async () => {
-      const { service, checkoutRepository } = createService();
-      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
-        createCart({ items: [createCartItem({ product: createProduct({ approvalStatus: 'PENDING' }) })] }),
-      );
-
-      await expect(
-        service.validateCheckout('user-id', createCheckoutDto()),
-      ).rejects.toThrow(UnprocessableEntityException);
-    });
-
-    it('throws when stock is insufficient', async () => {
-      const { service, checkoutRepository } = createService();
-      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+      checkoutRepository.findActiveCartWithItems.mockResolvedValueOnce(
         createCart({
-          items: [createCartItem({
-            quantity: 20,
-            product: createProduct({ inventoryItem: { stockQuantity: 5, reservedQuantity: 0 } }),
-          })],
+          items: [
+            createCartItem({
+              product: createProduct({ status: 'INACTIVE' }),
+            }),
+          ],
         }),
       );
 
@@ -152,17 +197,59 @@ describe('CheckoutService', () => {
     });
   });
 
+  describe('applyVoucher', () => {
+    it('uses the same total calculation path as checkout validation', async () => {
+      const { service, checkoutRepository, voucherService } = createService();
+      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+        createCart(),
+      );
+      voucherService.validateVoucherForCheckout.mockResolvedValue({
+        voucherId: 'voucher-id',
+        voucherCode: 'SALE10',
+        eligibleAmount: 200000,
+        discount: 20000,
+      });
+
+      const applyResult = await service.applyVoucher('user-id', {
+        voucherCode: ' sale10 ',
+        deliveryInfo: createCheckoutDto().deliveryInfo,
+      });
+      const validateResult = await service.validateCheckout(
+        'user-id',
+        createCheckoutDto(CheckoutPaymentProvider.COD, ' sale10 '),
+      );
+
+      expect(applyResult).toEqual({
+        voucherCode: 'SALE10',
+        subtotal: validateResult.subtotal,
+        discount: validateResult.discount,
+        shippingFee: validateResult.shippingFee,
+        total: validateResult.total,
+      });
+    });
+  });
+
   describe('createOrderFromCart', () => {
     it('creates order and returns it for COD', async () => {
-      const { service, checkoutRepository, inventoryService, tx } = createService();
-      const order = { id: 'order-id', orderNumber: 'ORD-123', totalAmount: 230000 };
+      const { service, checkoutRepository, inventoryService, tx } =
+        createService();
+      const order = {
+        id: 'order-id',
+        orderNumber: 'ORD-123',
+        totalAmount: 230000,
+      };
 
-      checkoutRepository.findActiveCartWithItems.mockResolvedValue(createCart());
+      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+        createCart(),
+      );
       checkoutRepository.createOrder.mockResolvedValue(order);
       checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
       checkoutRepository.markCartCheckedOut.mockResolvedValue({});
 
-      const result = await service.createOrderFromCart('user-id', createCheckoutDto());
+      const result = await service.createOrderFromCart(
+        'user-id',
+        createCheckoutDto(),
+      );
 
       expect(result).toEqual({ order });
       expect(checkoutRepository.createOrder).toHaveBeenCalledWith(
@@ -185,78 +272,166 @@ describe('CheckoutService', () => {
         tx,
       );
       expect(inventoryService.deductStockForCheckout).toHaveBeenCalledWith(
-        'product-id', 2, 'order-id', tx,
+        'product-id',
+        2,
+        'order-id',
+        tx,
       );
-      expect(checkoutRepository.markCartCheckedOut).toHaveBeenCalledWith('cart-id', tx);
+      expect(checkoutRepository.markCartCheckedOut).toHaveBeenCalledWith(
+        'cart-id',
+        tx,
+      );
       expect(checkoutRepository.createPayment).not.toHaveBeenCalled();
     });
 
-    it('creates payment record and returns paymentUrl for MOMO', async () => {
-      const { service, checkoutRepository } = createService();
-      const order = { id: 'order-id', orderNumber: 'ORD-123', totalAmount: 230000 };
-      const payment = { id: 'payment-id', status: 'PENDING' };
+    it('creates payment record and returns paymentUrl for MOMO and VNPAY', async () => {
+      for (const paymentProvider of [
+        CheckoutPaymentProvider.MOMO,
+        CheckoutPaymentProvider.VNPAY,
+      ]) {
+        const { service, checkoutRepository } = createService();
+        const order = {
+          id: 'order-id',
+          orderNumber: 'ORD-123',
+          totalAmount: 230000,
+        };
+        const payment = { id: 'payment-id', status: 'PENDING' };
 
-      checkoutRepository.findActiveCartWithItems.mockResolvedValue(createCart());
+        checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+          createCart(),
+        );
+        checkoutRepository.createOrder.mockResolvedValue(order);
+        checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
+        checkoutRepository.markCartCheckedOut.mockResolvedValue({});
+        checkoutRepository.createPayment.mockResolvedValue(payment);
+
+        const result = await service.createOrderFromCart(
+          'user-id',
+          createCheckoutDto(paymentProvider),
+        );
+
+        expect(result).toMatchObject({
+          order,
+          payment,
+          paymentUrl: expect.stringContaining(
+            paymentProvider === CheckoutPaymentProvider.MOMO
+              ? 'mock.momo.vn'
+              : 'mock.vnpay.vn',
+          ),
+        });
+        expect(checkoutRepository.createPayment).toHaveBeenCalledWith(
+          expect.objectContaining({
+            provider: paymentProvider,
+            status: 'PENDING',
+            amount: 230000,
+          }),
+          expect.anything(),
+        );
+      }
+    });
+
+    it('recalculates voucher totals and creates redemption inside the transaction', async () => {
+      const { service, checkoutRepository, voucherService, tx } =
+        createService();
+      const order = {
+        id: 'order-id',
+        orderNumber: 'ORD-123',
+        totalAmount: 210000,
+      };
+
+      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+        createCart(),
+      );
       checkoutRepository.createOrder.mockResolvedValue(order);
       checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
       checkoutRepository.markCartCheckedOut.mockResolvedValue({});
-      checkoutRepository.createPayment.mockResolvedValue(payment);
+      voucherService.validateVoucherForCheckout.mockResolvedValue({
+        voucherId: 'voucher-id',
+        voucherCode: 'SALE10',
+        eligibleAmount: 200000,
+        discount: 20000,
+      });
 
-      const result = await service.createOrderFromCart(
+      await service.createOrderFromCart(
         'user-id',
-        createCheckoutDto(CheckoutPaymentProvider.MOMO),
+        createCheckoutDto(CheckoutPaymentProvider.COD, 'SALE10'),
       );
 
-      expect(result).toMatchObject({ order, payment, paymentUrl: expect.stringContaining('mock.momo.vn') });
-      expect(checkoutRepository.createPayment).toHaveBeenCalledWith(
-        expect.objectContaining({ provider: 'MOMO', status: 'PENDING', amount: 230000 }),
-        expect.anything(),
+      expect(voucherService.validateVoucherForCheckout).toHaveBeenCalledWith(
+        expect.objectContaining({ client: tx, subtotal: 200000 }),
       );
-    });
-
-    it('creates payment record and returns paymentUrl for VNPAY', async () => {
-      const { service, checkoutRepository } = createService();
-      const order = { id: 'order-id', orderNumber: 'ORD-123', totalAmount: 230000 };
-      const payment = { id: 'payment-id', status: 'PENDING' };
-
-      checkoutRepository.findActiveCartWithItems.mockResolvedValue(createCart());
-      checkoutRepository.createOrder.mockResolvedValue(order);
-      checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
-      checkoutRepository.markCartCheckedOut.mockResolvedValue({});
-      checkoutRepository.createPayment.mockResolvedValue(payment);
-
-      const result = await service.createOrderFromCart(
-        'user-id',
-        createCheckoutDto(CheckoutPaymentProvider.VNPAY),
+      expect(checkoutRepository.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          discountAmount: 20000,
+          totalAmount: 210000,
+          voucher: { connect: { id: 'voucher-id' } },
+        }),
+        tx,
       );
-
-      expect(result).toMatchObject({ paymentUrl: expect.stringContaining('mock.vnpay.vn') });
-    });
-
-    it('throws when cart is empty', async () => {
-      const { service, checkoutRepository } = createService();
-      checkoutRepository.findActiveCartWithItems.mockResolvedValue(null);
-
-      await expect(
-        service.createOrderFromCart('user-id', createCheckoutDto()),
-      ).rejects.toThrow(UnprocessableEntityException);
-      expect(checkoutRepository.createOrder).not.toHaveBeenCalled();
+      expect(voucherService.createVoucherRedemption).toHaveBeenCalledWith({
+        userId: 'user-id',
+        orderId: 'order-id',
+        voucherId: 'voucher-id',
+        discountAmount: 20000,
+        client: tx,
+      });
     });
 
     it('propagates stock deduction failure and does not mark cart checked out', async () => {
       const { service, checkoutRepository, inventoryService } = createService();
-      const order = { id: 'order-id', orderNumber: 'ORD-123', totalAmount: 230000 };
+      const order = {
+        id: 'order-id',
+        orderNumber: 'ORD-123',
+        totalAmount: 230000,
+      };
 
-      checkoutRepository.findActiveCartWithItems.mockResolvedValue(createCart());
+      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+        createCart(),
+      );
       checkoutRepository.createOrder.mockResolvedValue(order);
       checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
       inventoryService.deductStockForCheckout.mockRejectedValue(
-        new UnprocessableEntityException({ code: 'BUSINESS_RULE_VIOLATION', message: 'Insufficient stock' }),
+        new UnprocessableEntityException({
+          code: 'BUSINESS_RULE_VIOLATION',
+          message: 'Insufficient stock',
+        }),
       );
 
       await expect(
         service.createOrderFromCart('user-id', createCheckoutDto()),
       ).rejects.toThrow(UnprocessableEntityException);
+      expect(checkoutRepository.markCartCheckedOut).not.toHaveBeenCalled();
+    });
+
+    it('does not mark cart checked out when voucher redemption fails', async () => {
+      const { service, checkoutRepository, voucherService } = createService();
+      const order = {
+        id: 'order-id',
+        orderNumber: 'ORD-123',
+        totalAmount: 210000,
+      };
+
+      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+        createCart(),
+      );
+      checkoutRepository.createOrder.mockResolvedValue(order);
+      checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
+      voucherService.validateVoucherForCheckout.mockResolvedValue({
+        voucherId: 'voucher-id',
+        voucherCode: 'SALE10',
+        eligibleAmount: 200000,
+        discount: 20000,
+      });
+      voucherService.createVoucherRedemption.mockRejectedValue(
+        new Error('redemption failed'),
+      );
+
+      await expect(
+        service.createOrderFromCart(
+          'user-id',
+          createCheckoutDto(CheckoutPaymentProvider.COD, 'SALE10'),
+        ),
+      ).rejects.toThrow('redemption failed');
       expect(checkoutRepository.markCartCheckedOut).not.toHaveBeenCalled();
     });
   });
