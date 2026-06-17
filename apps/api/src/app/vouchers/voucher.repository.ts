@@ -1,11 +1,16 @@
-import { DatabaseService, Prisma } from '@e-commerce-platform/database';
+import {
+  DatabaseService,
+  DbClient,
+  Prisma,
+} from '@e-commerce-platform/database';
 import {
   CreateVoucherDto,
   FindVouchersQueryDto,
   UpdateVoucherDto,
+  VoucherScope,
+  VoucherStatus,
 } from '@e-commerce-platform/api-contracts';
 import { Injectable } from '@nestjs/common';
-import { VoucherScope, VoucherStatus } from '@e-commerce-platform/types';
 
 @Injectable()
 export class VoucherRepository {
@@ -56,7 +61,7 @@ export class VoucherRepository {
               { scope: VoucherScope.ORDER },
               {
                 scope: VoucherScope.CATEGORY,
-                categories: { some: { categoryId } }
+                categories: { some: { categoryId } },
               },
             ],
           },
@@ -125,6 +130,45 @@ export class VoucherRepository {
     return this.databaseService.voucher.findUnique({
       where: { id: voucherId },
     });
+  }
+
+  findVoucherForCheckout(
+    code: string,
+    client: DbClient = this.databaseService,
+  ) {
+    return client.voucher.findUnique({
+      where: { code },
+      include: {
+        products: true,
+        categories: true,
+      },
+    });
+  }
+
+  countVoucherRedemptions(
+    voucherId: string,
+    client: DbClient = this.databaseService,
+  ) {
+    return client.voucherRedemption.count({
+      where: { voucherId },
+    });
+  }
+
+  countVoucherRedemptionsForUser(
+    voucherId: string,
+    userId: string,
+    client: DbClient = this.databaseService,
+  ) {
+    return client.voucherRedemption.count({
+      where: { voucherId, userId },
+    });
+  }
+
+  createVoucherRedemption(
+    data: Prisma.VoucherRedemptionCreateArgs['data'],
+    client: DbClient = this.databaseService,
+  ) {
+    return client.voucherRedemption.create({ data });
   }
 
   updateVoucher(voucherId: string, updateVoucherDto: UpdateVoucherDto) {

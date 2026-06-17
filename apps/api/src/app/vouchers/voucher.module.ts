@@ -6,5 +6,6 @@ import { VoucherRepository } from './voucher.repository';
 @Module({
   controllers: [VoucherController],
   providers: [VoucherService, VoucherRepository],
+  exports: [VoucherService],
 })
 export class VoucherModule {}
