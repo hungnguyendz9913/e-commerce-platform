@@ -1,4 +1,4 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, UnprocessableEntityException, NotFoundException } from '@nestjs/common';
 import {
   CreateVoucherDto,
   DiscountType,
@@ -14,6 +14,7 @@ import {
   ValidatedVoucherForCheckout,
   VoucherCheckoutCartItem,
 } from './voucher-checkout.types';
+import { DbClient } from '@e-commerce-platform/database';
 
 @Injectable()
 export class VoucherService {
@@ -47,10 +48,41 @@ export class VoucherService {
     voucherId: string,
     updateVoucherDto: UpdateVoucherDto,
   ) {
+    const voucher = await this.voucherRepository.findVoucherById(voucherId);
+    if (!voucher) {
+      throw new NotFoundException({
+        code: 'BUSINESS_RULE_VIOLATION',
+        message: 'Voucher not found.',
+      });
+    }
+
+    const now = new Date();
+    if (voucher.startsAt && voucher.startsAt <= now) {
+      throw new UnprocessableEntityException({
+        code: 'BUSINESS_RULE_VIOLATION',
+        message: 'Only vouchers that have not started can be updated.',
+      });
+    }
+    
     return this.voucherRepository.updateVoucher(voucherId, updateVoucherDto);
   }
 
   async deactivateVoucher(voucherId: string) {
+    const voucher = await this.voucherRepository.findVoucherById(voucherId);
+    if (!voucher) {
+      throw new NotFoundException({
+        code: 'BUSINESS_RULE_VIOLATION',
+        message: 'Voucher not found.',
+      });
+    }
+
+    if (voucher.status !== VoucherStatus.ACTIVE) {
+      throw new UnprocessableEntityException({
+        code: 'BUSINESS_RULE_VIOLATION',
+        message: 'Only active vouchers can be deactivated.',
+      });
+    }
+
     return this.voucherRepository.deactivateVoucher(voucherId);
   }
 
@@ -207,7 +239,13 @@ export class VoucherService {
         ? Math.min(rawDiscount, this.toNumber(voucher.maximumDiscountAmount))
         : rawDiscount;
 
-    return Math.max(0, Math.min(cappedDiscount, eligibleAmount));
+    const finalDiscount = Math.max(0, Math.min(cappedDiscount, eligibleAmount));
+
+    if (finalDiscount <= 0) {
+      this.throwVoucherViolation('Calculated discount is not valid.');
+    }
+
+    return finalDiscount;
   }
 
   private toNumber(value: unknown): number {
@@ -223,5 +261,42 @@ export class VoucherService {
       code: 'BUSINESS_RULE_VIOLATION',
       message,
     });
+  }
+
+  async isVoucherAvailableForUser(
+    voucherId: string,
+    userId: string,
+    client: DbClient = this.voucherRepository['databaseService'],
+  ) {
+    const voucher = await this.voucherRepository.findVoucherById(voucherId, client);
+
+    if (!voucher) {
+      throw new NotFoundException({
+        code: 'BUSINESS_RULE_VIOLATION',
+        message: 'Voucher not found.',
+      });
+    }
+
+    if (voucher.status !== VoucherStatus.ACTIVE) {
+      return false;
+    }
+
+    const voucherRedemptionCount = await this.voucherRepository.countVoucherRedemptions(voucherId, client);
+
+    if (voucher.usageLimit && voucherRedemptionCount >= voucher.usageLimit) {
+      return false;
+    }
+
+    const redemptionCount = await this.voucherRepository.countVoucherRedemptionsForUser(
+      voucherId,
+      userId,
+      client,
+    );
+
+    if (voucher.perUserLimit && redemptionCount >= voucher.perUserLimit) {
+      return false;
+    }
+
+    return true;
   }
 }

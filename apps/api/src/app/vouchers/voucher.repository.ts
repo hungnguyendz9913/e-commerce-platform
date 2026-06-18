@@ -126,8 +126,8 @@ export class VoucherRepository {
     };
   }
 
-  findVoucherById(voucherId: string) {
-    return this.databaseService.voucher.findUnique({
+  findVoucherById(voucherId: string, client: DbClient = this.databaseService) {
+    return client.voucher.findUnique({
       where: { id: voucherId },
     });
   }
@@ -189,6 +189,20 @@ export class VoucherRepository {
       scope: updateVoucherDto.scope,
     };
 
+    if (updateVoucherDto.productIds !== undefined) {
+      data.products = {
+        deleteMany: {},
+        create: updateVoucherDto.productIds.map((productId) => ({ productId })),
+      };
+    }
+
+    if (updateVoucherDto.categoryIds !== undefined) {
+      data.categories = {
+        deleteMany: {},
+        create: updateVoucherDto.categoryIds.map((categoryId) => ({ categoryId })),
+      };
+    }
+
     return this.databaseService.voucher.update({
       where: { id: voucherId },
       data,
@@ -199,6 +213,22 @@ export class VoucherRepository {
     return this.databaseService.voucher.update({
       where: { id: voucherId },
       data: { status: VoucherStatus.INACTIVE },
+    });
+  }
+
+  isVoucherAvailableForUser(
+    voucherId: string,
+    userId: string,
+    client: DbClient = this.databaseService,
+  ) {
+    return client.voucherRedemption.count({
+      where: { voucherId, userId },
+    });
+  }
+
+  getUsedVoucherCount(voucherId: string, client: DbClient = this.databaseService) {
+    return client.voucherRedemption.count({
+      where: { voucherId },
     });
   }
 }
