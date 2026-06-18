@@ -11,7 +11,7 @@ import {
   normalizeLowerString,
   normalizeOptionalString,
   normalizeRequiredString,
-} from '../products/validators.js';
+} from '../common/validators.js';
 import { CategoryStatus } from '@e-commerce-platform/types';
 
 export class UpdateCategoryDto {

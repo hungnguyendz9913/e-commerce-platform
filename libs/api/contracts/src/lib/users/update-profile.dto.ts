@@ -6,7 +6,7 @@ import {
   IsUrl,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { normalizeOptionalString } from '../products/validators.js';
+import { normalizeOptionalString } from '../common/validators.js';
 
 export class UpdateProfileDto {
   @Transform(({ value }) => normalizeOptionalString(value))

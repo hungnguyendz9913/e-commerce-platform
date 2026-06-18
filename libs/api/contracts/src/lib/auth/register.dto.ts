@@ -12,7 +12,7 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
-import { normalizeOptionalString } from '../products/validators.js';
+import { normalizeOptionalString } from '../common/validators.js';
 
 @ValidatorConstraint({ name: 'matchesProperty', async: false })
 export class MatchesPropertyConstraint implements ValidatorConstraintInterface {

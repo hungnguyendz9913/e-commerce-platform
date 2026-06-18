@@ -12,7 +12,6 @@ export * from './lib/products/product-image.dto.js';
 export * from './lib/products/product-inventory.dto.js';
 export * from './lib/products/product.enums.js';
 export * from './lib/products/update-product.dto.js';
-export * from './lib/products/validators.js';
 
 // Users
 export * from './lib/users/create-user.dto.js';
@@ -45,3 +44,8 @@ export * from './lib/orders/cancel-order.dto.js';
 export * from './lib/checkout/delivery-info.dto.js';
 export * from './lib/checkout/checkout.dto.js';
 export * from './lib/checkout/apply-voucher.dto.js';
+
+// Common
+export * from './lib/common/validators.js';
+export * from './lib/common/is-after.js';
+export * from './lib/common/require-field-if-matches.js';

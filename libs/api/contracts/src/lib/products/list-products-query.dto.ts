@@ -17,7 +17,7 @@ import {
   ProductStatus,
   SortOrder,
 } from './product.enums.js';
-import { normalizeOptionalString, toOptionalNumber } from './validators.js';
+import { normalizeOptionalString, toOptionalNumber } from '../common/validators.js';
 
 function toOptionalBoolean(value: unknown) {
   if (value === undefined || value === null || value === '') {

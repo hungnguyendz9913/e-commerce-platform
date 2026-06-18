@@ -1,5 +1,5 @@
 import { IsInt, IsOptional, Min, Validate } from 'class-validator';
-import { ReservedQuantityWithinStockConstraint } from './validators.js';
+import { ReservedQuantityWithinStockConstraint } from '../common/validators.js';
 
 export class ProductInventoryDto {
   @IsOptional()

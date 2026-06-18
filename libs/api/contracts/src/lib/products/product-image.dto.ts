@@ -11,7 +11,7 @@ import {
 import {
   normalizeOptionalString,
   normalizeRequiredString,
-} from './validators.js';
+} from '../common/validators.js';
 
 export class ProductImageDto {
   @Transform(({ value }) => normalizeRequiredString(value))

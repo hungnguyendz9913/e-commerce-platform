@@ -18,7 +18,7 @@ import {
   normalizeLowerString,
   normalizeOptionalString,
   normalizeRequiredString,
-} from './validators.js';
+} from '../common/validators.js';
 
 export class CreateProductDto {
   @Transform(({ value }) => normalizeRequiredString(value))

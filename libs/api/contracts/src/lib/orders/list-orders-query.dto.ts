@@ -15,7 +15,7 @@ import {
   PaymentStatus,
   SortOrder,
 } from '@e-commerce-platform/types';
-import { normalizeOptionalString } from '../products/validators.js';
+import { normalizeOptionalString } from '../common/validators.js';
 
 export class ListOrdersQueryDto {
   @Type(() => Number)
