@@ -79,6 +79,7 @@ function createService() {
   };
   const voucherService = {
     validateVoucherForCheckout: jest.fn(),
+    isVoucherAvailableForUser: jest.fn().mockResolvedValue(true),
     createVoucherRedemption: jest.fn(),
   };
 

@@ -100,6 +100,16 @@ export class CheckoutService {
       }
 
       if (summary.voucher) {
+        const canApplyVoucher = await this.voucherService.isVoucherAvailableForUser(
+          summary.voucher.voucherId,
+          userId,
+          tx,
+        );
+
+        if (!canApplyVoucher) {
+          throw new Error('Voucher usage limit for this user has been reached.');
+        }
+        
         await this.voucherService.createVoucherRedemption({
           userId,
           orderId: order.id,
