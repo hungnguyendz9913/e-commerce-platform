@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   IsDate,
   IsEnum,
@@ -11,11 +11,17 @@ import {
   MaxLength,
   Min,
   IsArray,
-  IsUUID
+  IsUUID,
+  IsPositive,
+  ValidateIf,
 } from 'class-validator';
 import { DiscountType, VoucherScope, VoucherStatus } from './voucher.enums.js';
+import { normalizeRequiredString } from '../common/validators.js';
+import { RequireFieldIfMatches } from '../common/require-field-if-matches.js';
+import { IsAfter } from '../common/is-after.js';
 
 export class CreateVoucherDto {
+  @Transform(({ value }) => normalizeRequiredString(value))
   @IsString()
   @IsNotEmpty()
   @MaxLength(64)
@@ -26,7 +32,7 @@ export class CreateVoucherDto {
 
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
+  @IsPositive()
   @Max(1000000000)
   discountValue!: number;
 
@@ -62,6 +68,9 @@ export class CreateVoucherDto {
   @Type(() => Date)
   @IsOptional()
   @IsDate()
+  @IsAfter('startsAt', {
+    message: 'expiresAt must be after startsAt',
+  })
   expiresAt?: Date;
 
   @IsOptional()
@@ -72,13 +81,15 @@ export class CreateVoucherDto {
   @IsEnum(VoucherScope)
   scope?: VoucherScope;
 
-  @IsOptional()
+  @ValidateIf((dto) => dto.scope === VoucherScope.PRODUCT || dto.productIds !== undefined)
   @IsArray()
   @IsUUID('4', { each: true })
+  @RequireFieldIfMatches('scope', VoucherScope.PRODUCT, { message: 'Product IDs are required when scope is "product"' })
   productIds?: string[];
 
-  @IsOptional()
+  @ValidateIf((dto) => dto.scope === VoucherScope.CATEGORY || dto.categoryIds !== undefined)
   @IsArray()
   @IsUUID('4', { each: true })
+  @RequireFieldIfMatches('scope', VoucherScope.CATEGORY, { message: 'Category IDs are required when scope is "category"' })
   categoryIds?: string[];
 }
