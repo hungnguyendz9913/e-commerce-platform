@@ -48,4 +48,3 @@ export * from './lib/checkout/apply-voucher.dto.js';
 // Common
 export * from './lib/common/validators.js';
 export * from './lib/common/is-after.js';
-export * from './lib/common/require-field-if-matches.js';

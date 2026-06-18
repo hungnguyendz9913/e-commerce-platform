@@ -14,10 +14,10 @@ import {
   IsUUID,
   IsPositive,
   ValidateIf,
+  ArrayNotEmpty,
 } from 'class-validator';
 import { DiscountType, VoucherScope, VoucherStatus } from './voucher.enums.js';
 import { normalizeRequiredString } from '../common/validators.js';
-import { RequireFieldIfMatches } from '../common/require-field-if-matches.js';
 import { IsAfter } from '../common/is-after.js';
 
 export class CreateVoucherDto {
@@ -83,13 +83,13 @@ export class CreateVoucherDto {
 
   @ValidateIf((dto) => dto.scope === VoucherScope.PRODUCT || dto.productIds !== undefined)
   @IsArray()
+  @ArrayNotEmpty({ message: 'Product IDs are required when scope is "product"' })
   @IsUUID('4', { each: true })
-  @RequireFieldIfMatches('scope', VoucherScope.PRODUCT, { message: 'Product IDs are required when scope is "product"' })
   productIds?: string[];
 
   @ValidateIf((dto) => dto.scope === VoucherScope.CATEGORY || dto.categoryIds !== undefined)
   @IsArray()
+  @ArrayNotEmpty({ message: 'Category IDs are required when scope is "category"' })
   @IsUUID('4', { each: true })
-  @RequireFieldIfMatches('scope', VoucherScope.CATEGORY, { message: 'Category IDs are required when scope is "category"' })
   categoryIds?: string[];
 }
