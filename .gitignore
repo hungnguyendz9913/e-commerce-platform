@@ -59,3 +59,8 @@ command.txt
 
 # Openspec AI tool
 .codex
+.continue
+
+# Next.js build output
+.next
+dist
