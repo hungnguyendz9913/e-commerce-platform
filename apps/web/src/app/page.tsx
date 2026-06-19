@@ -1,3 +1,5 @@
+import { Button } from 'flowbite-react';
+
 export default function Index() {
   /*
    * Replace the elements below with your own.
@@ -34,6 +36,9 @@ export default function Index() {
                 <span>You&apos;re up and running</span>
               </h2>
               <a href="#commands"> What&apos;s next? </a>
+              <div className="mt-4">
+                <Button color="blue">Flowbite React is ready</Button>
+              </div>
             </div>
             <div className="logo-container">
               <svg

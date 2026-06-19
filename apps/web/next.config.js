@@ -1,7 +1,7 @@
 //@ts-check
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { composePlugins, withNx } = require('@nx/next');
+const withFlowbiteReact = require('flowbite-react/plugin/nextjs');
 
 /**
  * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
@@ -15,6 +15,7 @@ const nextConfig = {
 const plugins = [
   // Add more Next.js plugins to this list if needed.
   withNx,
+  withFlowbiteReact,
 ];
 
 module.exports = composePlugins(...plugins)(nextConfig);

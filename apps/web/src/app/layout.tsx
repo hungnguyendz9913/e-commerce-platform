@@ -1,4 +1,6 @@
 import './global.css';
+import { ThemeModeScript } from 'flowbite-react';
+import { StoreInit as ThemeInit } from 'flowbite-react/store/init';
 
 export const metadata = {
   title: 'Welcome to web',
@@ -11,8 +13,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <ThemeModeScript />
+      </head>
+      <body>
+        <ThemeInit dark prefix="" version={3} />
+        {children}
+      </body>
     </html>
   );
 }
