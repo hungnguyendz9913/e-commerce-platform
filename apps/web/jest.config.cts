@@ -7,6 +7,9 @@ const createJestConfig = nextJest({
 const config = {
   displayName: '@e-commerce-platform/web',
   preset: '../../jest.preset.js',
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
   transform: {
     '^(?!.*\\.(js|jsx|ts|tsx|css|json)$)': '@nx/react/plugins/jest',
   },
