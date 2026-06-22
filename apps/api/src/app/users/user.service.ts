@@ -1,4 +1,4 @@
-import { type CreateUserDto } from '@e-commerce-platform/api-contracts';
+import { UpdateMyAddressDto, type CreateUserDto } from '@e-commerce-platform/api-contracts';
 import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
 import {
   ConflictException,
@@ -118,5 +118,17 @@ export class UserService {
 
   async createMyAddress(id: string, createMyAddressDto: CreateMyAddressDto) {
     return this.addressService.createMyAddress(id, createMyAddressDto);
+  }
+
+  async updateMyAddress(id: string, addressId: string, updateMyAddressDto: UpdateMyAddressDto) {
+    return this.addressService.updateMyAddress(id, addressId, updateMyAddressDto);
+  }
+
+  async deleteMyAddress(id: string, addressId: string) {
+    return this.addressService.deleteMyAddress(id, addressId);
+  }
+
+  async setMyAddressToDefault(id: string, addressId: string) {
+    return this.addressService.setDefaultAddress(id, addressId);
   }
 }

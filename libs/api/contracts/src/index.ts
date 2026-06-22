@@ -19,6 +19,7 @@ export * from './lib/users/update-profile.dto.js';
 
 // Addresses
 export * from './lib/addresses/create-address.dto.js';
+export * from './lib/addresses/update-address.dto.js';
 
 // Categories
 export * from './lib/categories/create-category.dto.js';

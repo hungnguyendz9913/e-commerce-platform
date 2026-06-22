@@ -1,9 +1,9 @@
-import { Body, Controller, Get, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   CurrentUser,
   type AuthenticatedUser,
 } from '@e-commerce-platform/api-common';
-import { CreateMyAddressDto, UpdateProfileDto } from '@e-commerce-platform/api-contracts';
+import { CreateMyAddressDto, UpdateMyAddressDto, UpdateProfileDto } from '@e-commerce-platform/api-contracts';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserService } from './user.service';
 
@@ -36,5 +36,23 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   createMyAddress(@CurrentUser() user: AuthenticatedUser, @Body() createMyAddressDto: CreateMyAddressDto) {
     return this.userService.createMyAddress(user.userId, createMyAddressDto);
+  }
+
+  @Patch('me/addresses/:addressId')
+  @UseGuards(JwtAuthGuard)
+  updateMyAddress(@CurrentUser() user: AuthenticatedUser, @Param('addressId') addressId: string, @Body() updateMyAddressDto: UpdateMyAddressDto) {
+    return this.userService.updateMyAddress(user.userId, addressId, updateMyAddressDto);
+  }
+
+  @Delete('me/addresses/:addressId')
+  @UseGuards(JwtAuthGuard)
+  deleteMyAddress(@CurrentUser() user: AuthenticatedUser, @Param('addressId') addressId: string) {
+    return this.userService.deleteMyAddress(user.userId, addressId);
+  }
+
+  @Patch('me/addresses/:addressId/default')
+  @UseGuards(JwtAuthGuard)
+  setMyAddressToDefault(@CurrentUser() user: AuthenticatedUser, @Param('addressId') addressId: string) {
+    return this.userService.setMyAddressToDefault(user.userId, addressId);
   }
 }
