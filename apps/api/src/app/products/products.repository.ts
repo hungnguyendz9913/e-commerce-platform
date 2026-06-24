@@ -118,8 +118,11 @@ export class ProductsRepository {
     });
   }
 
-  findProductDeleteInfo(id: string) {
-    return this.databaseService.product.findUnique({
+  findProductDeleteInfo(
+    id: string,
+    client: DbClient = this.databaseService,
+  ) {
+    return client.product.findUnique({
       where: { id },
       select: {
         id: true,
@@ -134,16 +137,24 @@ export class ProductsRepository {
     });
   }
 
-  archiveProduct(id: string) {
-    return this.databaseService.product.update({
+  archiveProduct(
+    id: string,
+    client: DbClient = this.databaseService,
+  ) {
+    return client.product.update({
       where: { id },
       data: { status: ProductStatus.ARCHIVED },
       include: productInclude,
     });
   }
 
-  deleteProduct(id: string) {
-    return this.databaseService.product.delete({ where: { id } });
+  deleteProduct(
+    id: string,
+    client: DbClient = this.databaseService,
+  ) {
+    return client.product.delete({
+      where: { id },
+    });
   }
 
   findProductForCart(productId: string) {

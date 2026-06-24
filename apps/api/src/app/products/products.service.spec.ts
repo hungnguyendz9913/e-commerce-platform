@@ -62,6 +62,7 @@ function createDatabaseMock() {
       findUnique: jest.fn().mockResolvedValue(productFixture()),
       create: jest.fn().mockResolvedValue(productFixture()),
       update: jest.fn().mockResolvedValue(productFixture()),
+      delete: jest.fn(),
     },
   };
   const databaseService = {
@@ -462,8 +463,9 @@ describe('ProductsService', () => {
   });
 
   it('should hard-delete products without protected references', async () => {
-    const { databaseService, rawDatabaseService } = createDatabaseMock();
-    rawDatabaseService.product.findUnique.mockResolvedValue({
+    const { databaseService, transaction } = createDatabaseMock();
+
+    transaction.product.findUnique.mockResolvedValue({
       id: 'product-id',
       _count: {
         cartItems: 0,
@@ -471,7 +473,11 @@ describe('ProductsService', () => {
         inventoryMovements: 0,
       },
     });
-    const { service } = createService(databaseService, {});
+
+    const { service, transactionService } = createService(
+      databaseService,
+      transaction,
+    );
 
     await expect(service.deleteProduct('product-id')).resolves.toEqual({
       data: {
@@ -480,14 +486,20 @@ describe('ProductsService', () => {
         id: 'product-id',
       },
     });
-    expect(rawDatabaseService.product.delete).toHaveBeenCalledWith({
-      where: { id: 'product-id' },
+
+    expect(transactionService.run).toHaveBeenCalledTimes(1);
+
+    expect(transaction.product.delete).toHaveBeenCalledWith({
+      where: {
+        id: 'product-id',
+      },
     });
   });
 
   it('should archive products with protected references', async () => {
-    const { databaseService, rawDatabaseService } = createDatabaseMock();
-    rawDatabaseService.product.findUnique.mockResolvedValue({
+    const { databaseService, transaction } = createDatabaseMock();
+
+    transaction.product.findUnique.mockResolvedValue({
       id: 'product-id',
       _count: {
         cartItems: 0,
@@ -495,7 +507,17 @@ describe('ProductsService', () => {
         inventoryMovements: 0,
       },
     });
-    const { service } = createService(databaseService, {});
+
+    transaction.product.update.mockResolvedValue(
+      productFixture({
+        status: 'ARCHIVED',
+      }),
+    );
+
+    const { service, transactionService } = createService(
+      databaseService,
+      transaction,
+    );
 
     await expect(service.deleteProduct('product-id')).resolves.toMatchObject({
       data: {
@@ -507,10 +529,17 @@ describe('ProductsService', () => {
         },
       },
     });
-    expect(rawDatabaseService.product.update).toHaveBeenCalledWith(
+
+    expect(transactionService.run).toHaveBeenCalledTimes(1);
+
+    expect(transaction.product.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'product-id' },
-        data: { status: 'ARCHIVED' },
+        where: {
+          id: 'product-id',
+        },
+        data: {
+          status: 'ARCHIVED',
+        },
       }),
     );
   });
@@ -728,5 +757,67 @@ describe('ProductsService', () => {
     );
 
     expect(rawDatabaseService.product.findMany).not.toHaveBeenCalled();
+  });
+
+  it('should archive in a fresh transaction when hard delete hits a foreign key race', async () => {
+    const { databaseService, transaction } = createDatabaseMock();
+
+    transaction.product.findUnique
+      .mockResolvedValueOnce({
+        id: 'product-id',
+        _count: {
+          cartItems: 0,
+          orderItems: 0,
+          inventoryMovements: 0,
+        },
+      })
+      .mockResolvedValueOnce(productFixture());
+
+    transaction.product.delete.mockRejectedValue(
+      Object.assign(new Error('Foreign key constraint failed'), {
+        code: 'P2003',
+      }),
+    );
+
+    transaction.product.update.mockResolvedValue(
+      productFixture({
+        status: 'ARCHIVED',
+      }),
+    );
+
+    const { service, transactionService } = createService(
+      databaseService,
+      transaction,
+    );
+
+    await expect(service.deleteProduct('product-id')).resolves.toMatchObject({
+      data: {
+        deleted: false,
+        archived: true,
+        product: {
+          id: 'product-id',
+          status: 'archived',
+        },
+      },
+    });
+
+    expect(transactionService.run).toHaveBeenCalledTimes(2);
+
+    expect(transaction.product.delete).toHaveBeenCalledWith({
+      where: {
+        id: 'product-id',
+      },
+    });
+
+    expect(transaction.product.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'product-id',
+        },
+        data: {
+          status: 'ARCHIVED',
+        },
+      }),
+    );
   });
 });

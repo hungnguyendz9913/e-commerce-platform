@@ -1,5 +1,6 @@
 export const PrismaErrorCode = {
   UniqueConstraint: 'P2002',
+  ForeignKeyConstraint: 'P2003',
 } as const;
 
 export type PrismaErrorCodeType =

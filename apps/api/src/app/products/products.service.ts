@@ -248,38 +248,63 @@ export class ProductsService {
   }
 
   async deleteProduct(id: string) {
-    const product = await this.productsRepository.findProductDeleteInfo(id);
+    try {
+      return await this.transactionService.run(async (transaction) => {
+        const product = await this.productsRepository.findProductDeleteInfo(
+          id,
+          transaction,
+        );
 
-    if (!product) {
-      throw new NotFoundException('Product not found');
+        if (!product) {
+          throw new NotFoundException('Product not found');
+        }
+
+        const hasProtectedReferences =
+          product._count.cartItems > 0 ||
+          product._count.orderItems > 0 ||
+          product._count.inventoryMovements > 0;
+
+        if (hasProtectedReferences) {
+          const archivedProduct =
+            await this.productsRepository.archiveProduct(id, transaction);
+
+          return this.toArchivedDeleteResult(archivedProduct);
+        }
+
+        await this.productsRepository.deleteProduct(id, transaction);
+
+        return {
+          data: {
+            deleted: true,
+            archived: false,
+            id,
+          },
+        };
+      });
+    } catch (error) {
+      if (
+        !prismaError(
+          error,
+          PrismaErrorCode.ForeignKeyConstraint,
+        )
+      ) {
+        throw error;
+      }
+
+      return this.transactionService.run(async (transaction) => {
+        const existingProduct =
+          await this.productsRepository.findProductById(id, transaction);
+
+        if (!existingProduct) {
+          throw new NotFoundException('Product not found');
+        }
+
+        const archivedProduct =
+          await this.productsRepository.archiveProduct(id, transaction);
+
+        return this.toArchivedDeleteResult(archivedProduct);
+      });
     }
-
-    const hasProtectedReferences =
-      product._count.cartItems > 0 ||
-      product._count.orderItems > 0 ||
-      product._count.inventoryMovements > 0;
-
-    if (hasProtectedReferences) {
-      const archivedProduct = await this.productsRepository.archiveProduct(id);
-
-      return {
-        data: {
-          deleted: false,
-          archived: true,
-          product: this.toAdminDetail(archivedProduct),
-        },
-      };
-    }
-
-    await this.productsRepository.deleteProduct(id);
-
-    return {
-      data: {
-        deleted: true,
-        archived: false,
-        id,
-      },
-    };
   }
 
   private buildProductWhere(
@@ -548,5 +573,15 @@ export class ProductsService {
         'minPrice must be less than or equal to maxPrice',
       );
     }
+  }
+
+  private toArchivedDeleteResult(product: ProductWithRelations) {
+    return {
+      data: {
+        deleted: false,
+        archived: true,
+        product: this.toAdminDetail(product),
+      },
+    };
   }
 }
