@@ -26,6 +26,8 @@ export class ProductsService {
   ) {}
 
   async listAdminProducts(query: ListProductsQueryDto) {
+    this.assertValidPriceRange(query);
+
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const where = this.buildProductWhere(query, false);
@@ -50,6 +52,8 @@ export class ProductsService {
   }
 
   async listPublicProducts(query: ListProductsQueryDto) {
+    this.assertValidPriceRange(query);
+
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const where = this.buildProductWhere(query, true);
@@ -532,5 +536,17 @@ export class ProductsService {
     const reservedQuantity = product.inventoryItem?.reservedQuantity ?? 0;
 
     return Math.max(0, stockQuantity - reservedQuantity);
+  }
+
+  private assertValidPriceRange(query: ListProductsQueryDto) {
+    if (
+      query.minPrice !== undefined &&
+      query.maxPrice !== undefined &&
+      query.minPrice > query.maxPrice
+    ) {
+      throw new BadRequestException(
+        'minPrice must be less than or equal to maxPrice',
+      );
+    }
   }
 }

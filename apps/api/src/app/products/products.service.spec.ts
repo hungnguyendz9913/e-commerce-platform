@@ -698,4 +698,35 @@ describe('ProductsService', () => {
 
     expect(transaction.product.create).not.toHaveBeenCalled();
   });
+
+  it('should reject an invalid product price range', async () => {
+    const { databaseService, rawDatabaseService } = createDatabaseMock();
+    const { service } = createService(databaseService, {});
+
+    await expect(
+      service.listPublicProducts({
+        minPrice: 200,
+        maxPrice: 100,
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(rawDatabaseService.product.findMany).not.toHaveBeenCalled();
+    expect(rawDatabaseService.product.count).not.toHaveBeenCalled();
+  });
+
+  it('should reject an invalid admin product price range', async () => {
+    const { databaseService, rawDatabaseService } = createDatabaseMock();
+    const { service } = createService(databaseService, {});
+
+    await expect(
+      service.listAdminProducts({
+        minPrice: 500,
+        maxPrice: 100,
+      }),
+    ).rejects.toThrow(
+      'minPrice must be less than or equal to maxPrice',
+    );
+
+    expect(rawDatabaseService.product.findMany).not.toHaveBeenCalled();
+  });
 });
