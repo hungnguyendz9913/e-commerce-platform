@@ -247,4 +247,38 @@ test.describe('Admin products API', () => {
       expect(response.status()).toBe(403);
     });
   }
+
+  test('POST /admin/products rejects a price exceeding database precision', async () => {
+    const response = await api.post('/api/admin/products', {
+      headers: adminHeaders,
+      data: {
+        ...createProductPayloadFixture,
+        price: 10_000_000_000,
+      },
+    });
+
+    const body = await response.json();
+
+    expect(response.status()).toBe(400);
+    expect(body).not.toHaveProperty('data');
+    expect(productsService.createProduct.calls).toEqual([]);
+  });
+
+  test('PATCH /admin/products/{productId} rejects a price exceeding database precision', async () => {
+    const response = await api.patch(
+      `/api/admin/products/${productIds.admin}`,
+      {
+        headers: adminHeaders,
+        data: {
+          price: 10_000_000_000,
+        },
+      },
+    );
+
+    const body = await response.json();
+
+    expect(response.status()).toBe(400);
+    expect(body).not.toHaveProperty('data');
+    expect(productsService.updateProduct.calls).toEqual([]);
+  });
 });
