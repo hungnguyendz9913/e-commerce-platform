@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Prisma, DbClient } from '@e-commerce-platform/database';
 import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
 import {
@@ -397,11 +397,24 @@ export class ProductsService {
   }
 
   private toImageCreateMany(images: ProductImageDto[]) {
+    const primaryImageIndexes = images
+      .map((image, index) => (image.isPrimary ? index : -1))
+      .filter((index) => index !== -1);
+
+    if (primaryImageIndexes.length > 1) {
+      throw new BadRequestException(
+        'Only one primary product image is allowed',
+      );
+    }
+
+    const primaryImageIndex =
+      primaryImageIndexes[0] ?? (images.length > 0 ? 0 : -1);
+
     return images.map((image, index) => ({
       imageUrl: image.imageUrl,
       altText: image.altText,
       sortOrder: image.sortOrder ?? index,
-      isPrimary: image.isPrimary ?? false,
+      isPrimary: index === primaryImageIndex,
     }));
   }
 

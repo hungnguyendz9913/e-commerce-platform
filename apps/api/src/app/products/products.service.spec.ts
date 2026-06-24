@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import {
   DatabaseService,
   TransactionService,
@@ -630,5 +630,72 @@ describe('ProductsService', () => {
     expect(result.data[0]).toMatchObject({
       inStock: true,
     });
+  });
+
+  it('should select the first image as primary when none is provided', async () => {
+    const { databaseService, transaction } = createDatabaseMock();
+    const { service } = createService(databaseService, transaction);
+
+    await service.createProduct({
+      sku: 'SKU-1',
+      name: 'Test Product',
+      slug: 'test-product',
+      price: 100,
+      categoryId: 'category-id',
+      images: [
+        {
+          imageUrl: 'https://example.com/first.jpg',
+        },
+        {
+          imageUrl: 'https://example.com/second.jpg',
+        },
+      ],
+    });
+
+    expect(transaction.product.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          images: {
+            create: [
+              expect.objectContaining({
+                imageUrl: 'https://example.com/first.jpg',
+                isPrimary: true,
+              }),
+              expect.objectContaining({
+                imageUrl: 'https://example.com/second.jpg',
+                isPrimary: false,
+              }),
+            ],
+          },
+        }),
+      }),
+    );
+  });
+
+  it('should reject multiple primary images', async () => {
+    const { databaseService, transaction } = createDatabaseMock();
+    const { service } = createService(databaseService, transaction);
+
+    await expect(
+      service.createProduct({
+        sku: 'SKU-1',
+        name: 'Test Product',
+        slug: 'test-product',
+        price: 100,
+        categoryId: 'category-id',
+        images: [
+          {
+            imageUrl: 'https://example.com/first.jpg',
+            isPrimary: true,
+          },
+          {
+            imageUrl: 'https://example.com/second.jpg',
+            isPrimary: true,
+          },
+        ],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(transaction.product.create).not.toHaveBeenCalled();
   });
 });
