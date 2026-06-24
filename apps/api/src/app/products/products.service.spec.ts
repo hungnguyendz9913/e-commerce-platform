@@ -9,6 +9,7 @@ import { InventoryService } from '../inventory/inventory.service';
 
 const createdAt = new Date('2026-06-09T01:00:00.000Z');
 const updatedAt = new Date('2026-06-09T02:00:00.000Z');
+const reservedQuantityFieldRef = 'inventoryItem.reservedQuantity';
 
 function productFixture(overrides: Record<string, unknown> = {}) {
   return {
@@ -76,6 +77,13 @@ function createDatabaseMock() {
       ),
       delete: jest.fn(),
     },
+
+    inventoryItem: {
+      fields: {
+        reservedQuantity: reservedQuantityFieldRef,
+      },
+    },
+
     $transaction: jest.fn((input: unknown) => {
       if (Array.isArray(input)) {
         return Promise.all(input);
@@ -185,7 +193,7 @@ describe('ProductsService', () => {
           inventoryItem: {
             is: {
               stockQuantity: {
-                gt: 0,
+                gt: reservedQuantityFieldRef,
               },
             },
           },
@@ -562,5 +570,55 @@ describe('ProductsService', () => {
         },
       }),
     );
+  });
+
+  it('should mark product out of stock when all stock is reserved', async () => {
+    const { databaseService, rawDatabaseService } = createDatabaseMock();
+
+    rawDatabaseService.product.findMany.mockResolvedValue([
+      productFixture({
+        inventoryItem: {
+          id: 'inventory-id',
+          productId: 'product-id',
+          stockQuantity: 5,
+          reservedQuantity: 5,
+          version: 0,
+          updatedAt,
+        },
+      }),
+    ]);
+
+    const { service } = createService(databaseService, {});
+
+    const result = await service.listPublicProducts({});
+
+    expect(result.data[0]).toMatchObject({
+      inStock: false,
+    });
+  });
+
+  it('should mark product in stock when unreserved stock remains', async () => {
+    const { databaseService, rawDatabaseService } = createDatabaseMock();
+
+    rawDatabaseService.product.findMany.mockResolvedValue([
+      productFixture({
+        inventoryItem: {
+          id: 'inventory-id',
+          productId: 'product-id',
+          stockQuantity: 5,
+          reservedQuantity: 4,
+          version: 0,
+          updatedAt,
+        },
+      }),
+    ]);
+
+    const { service } = createService(databaseService, {});
+
+    const result = await service.listPublicProducts({});
+
+    expect(result.data[0]).toMatchObject({
+      inStock: true,
+    });
   });
 });

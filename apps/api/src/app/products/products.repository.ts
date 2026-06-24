@@ -153,4 +153,19 @@ export class ProductsRepository {
       },
     });
   }
+
+  buildInventoryAvailabilityFilter(
+    inStock: boolean,
+  ): Prisma.InventoryItemNullableScalarRelationFilter {
+    const reservedQuantityField =
+      this.databaseService.inventoryItem.fields.reservedQuantity;
+
+    return {
+      is: {
+        stockQuantity: inStock
+          ? { gt: reservedQuantityField }
+          : { lte: reservedQuantityField },
+      },
+    };
+  }
 }

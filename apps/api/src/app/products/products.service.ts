@@ -312,9 +312,10 @@ export class ProductsService {
     }
 
     if (query.inStock !== undefined) {
-      where.inventoryItem = query.inStock
-        ? { is: { stockQuantity: { gt: 0 } } }
-        : { is: { stockQuantity: 0 } };
+      where.inventoryItem =
+        this.productsRepository.buildInventoryAvailabilityFilter(
+          query.inStock,
+        );
     }
 
     return where;
@@ -439,6 +440,8 @@ export class ProductsService {
   }
 
   private toPublicSummary(product: ProductWithRelations) {
+    const availableQuantity = this.getAvailableQuantity(product);
+
     return {
       id: product.id,
       name: product.name,
@@ -446,7 +449,7 @@ export class ProductsService {
       price: this.formatDecimal(product.price),
       category: this.toCategory(product.category),
       primaryImage: this.toPrimaryImage(product),
-      inStock: (product.inventoryItem?.stockQuantity ?? 0) > 0,
+      inStock: availableQuantity > 0,
     };
   }
 
@@ -461,7 +464,7 @@ export class ProductsService {
         sortOrder: image.sortOrder,
         isPrimary: image.isPrimary,
       })),
-      stockQuantity: product.inventoryItem?.stockQuantity ?? 0,
+      availableQuantity: this.getAvailableQuantity(product),
     };
   }
 
@@ -504,5 +507,12 @@ export class ProductsService {
 
   async findProductForCart(productId: string) {
     return this.productsRepository.findProductForCart(productId);
+  }
+
+  private getAvailableQuantity(product: ProductWithRelations) {
+    const stockQuantity = product.inventoryItem?.stockQuantity ?? 0;
+    const reservedQuantity = product.inventoryItem?.reservedQuantity ?? 0;
+
+    return Math.max(0, stockQuantity - reservedQuantity);
   }
 }
