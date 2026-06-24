@@ -546,6 +546,11 @@ describe('ProductsService', () => {
         where: expect.objectContaining({
           status: 'ACTIVE',
           approvalStatus: 'APPROVED',
+          category: {
+            is: {
+              status: 'ACTIVE',
+            },
+          },
         }),
       }),
     );
@@ -567,6 +572,11 @@ describe('ProductsService', () => {
           id: 'product-id',
           status: 'ACTIVE',
           approvalStatus: 'APPROVED',
+          category: {
+            is: {
+              status: 'ACTIVE',
+            },
+          },
         },
       }),
     );

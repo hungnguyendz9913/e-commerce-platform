@@ -287,6 +287,11 @@ export class ProductsService {
     if (publicOnly) {
       where.status = ProductStatus.ACTIVE;
       where.approvalStatus = ProductApprovalStatus.APPROVED;
+      where.category = {
+        is: {
+          status: ProductStatus.ACTIVE,
+        },
+      };
     } else {
       where.status = query.status;
       where.approvalStatus = query.approvalStatus;

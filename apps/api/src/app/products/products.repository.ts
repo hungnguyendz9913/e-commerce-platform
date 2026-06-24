@@ -59,6 +59,11 @@ export class ProductsRepository {
         id,
         status: ProductStatus.ACTIVE,
         approvalStatus: ProductApprovalStatus.APPROVED,
+        category: {
+          is: {
+            status: 'ACTIVE',
+          },
+        },
       },
       include: productInclude,
     });
@@ -147,6 +152,11 @@ export class ProductsRepository {
         id: productId,
         status: 'ACTIVE',
         approvalStatus: 'APPROVED',
+        category: {
+          is: {
+            status: 'ACTIVE',
+          },
+        },
       },
       include: {
         inventoryItem: true,
