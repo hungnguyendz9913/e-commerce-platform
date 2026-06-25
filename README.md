@@ -1,110 +1,229 @@
-# ECommercePlatform
+# ShopVN E-commerce Platform
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+A full-stack e-commerce platform built with TypeScript in an Nx monorepo. The project combines a Next.js storefront and admin interface, a NestJS REST API, PostgreSQL with Prisma, shared workspace libraries, unit tests, and Playwright end-to-end tests.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+> **Project status:** under active development. The repository already contains the main storefront, authentication, customer, commerce, and administration modules, but it is not presented as a production-ready release yet.
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## Main features
 
-## Generate a library
+- Guest, customer, and admin application areas
+- Registration, login, logout, session handling, and role-based access control
+- Product catalog with search, filters, sorting, pagination, and product details
+- Shopping cart, vouchers, checkout, and order flows
+- Customer profile, address book, and order history
+- Admin dashboard and management interfaces
+- NestJS modules for authentication, products, categories, addresses, carts, vouchers, checkout, orders, and dashboard data
+- PostgreSQL database access through Prisma
+- Unit testing with Jest and end-to-end testing with Playwright
+- Docker Compose services for PostgreSQL and pgAdmin
 
-```sh
-npx nx g @nx/js:lib packages/pkg1 --publishable --importPath=@my-org/pkg1
+## Tech stack
+
+| Area | Technologies |
+| --- | --- |
+| Monorepo | Nx 22 |
+| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS, Flowbite React |
+| Backend | NestJS 11, TypeScript, class-validator |
+| Database | PostgreSQL 17, Prisma 7 |
+| Testing | Jest, Testing Library, Playwright |
+| Tooling | ESLint, Prettier, Docker Compose |
+
+## Repository structure
+
+```text
+.
+├── apps/
+│   ├── api/              # NestJS REST API
+│   ├── api-e2e/          # Backend end-to-end tests
+│   ├── web/              # Next.js application
+│   └── web-e2e/          # Playwright frontend tests
+├── libs/
+│   ├── api/              # API contracts and reusable API libraries
+│   ├── infrastructure/   # Database and infrastructure libraries
+│   └── shared/           # Shared types and utilities
+├── docs/                 # SRS, SDD, ERD, API, and use-case documentation
+├── openspec/             # Specifications and archived implementation changes
+├── docker-compose.yml
+├── nx.json
+├── package.json
+└── prisma.config.ts
 ```
 
-## Run tasks
+## Prerequisites
 
-To build the library use:
+Install the following tools before running the project:
 
-```sh
-npx nx build pkg1
+- Node.js 20 or newer
+- npm
+- Docker Engine or Docker Desktop with Docker Compose
+
+## Getting started
+
+### 1. Clone and install dependencies
+
+```bash
+git clone https://github.com/hungnguyendz9913/e-commerce-platform.git
+cd e-commerce-platform
+npm install
 ```
 
-To run any task with Nx use:
+### 2. Configure the backend and database environment
 
-```sh
-npx nx <target> <project-name>
+Copy the example environment file:
+
+```bash
+cp .env.example .env
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+On PowerShell:
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Versioning and releasing
-
-To version and release the library use
-
-```
-npx nx release
+```powershell
+Copy-Item .env.example .env
 ```
 
-Pass `--dry-run` to see what would happen without actually releasing the library.
+Keep the PostgreSQL and pgAdmin values from `.env.example`, then add these variables to the root `.env` file:
 
-[Learn more about Nx release &raquo;](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Keep TypeScript project references up to date
-
-Nx automatically updates TypeScript [project references](https://www.typescriptlang.org/docs/handbook/project-references.html) in `tsconfig.json` files to ensure they remain accurate based on your project dependencies (`import` or `require` statements). This sync is automatically done when running tasks such as `build` or `typecheck`, which require updated references to function correctly.
-
-To manually trigger the process to sync the project graph dependencies information to the TypeScript project references, run the following command:
-
-```sh
-npx nx sync
+```dotenv
+DATABASE_URL=postgresql://ecommerce_platform_by_hung_nguyen:your_postgres_password@localhost:5432/ecommerce_platform_db?schema=public
+JWT_SECRET=replace-with-a-long-random-secret
 ```
 
-You can enforce that the TypeScript project references are always in the correct state when running in CI by adding a step to your CI job configuration that runs the following command:
+The username, password, port, and database name in `DATABASE_URL` must match the corresponding PostgreSQL variables in the same file.
 
-```sh
-npx nx sync:check
+### 3. Configure the frontend API URL
+
+Create `apps/web/.env.local`:
+
+```dotenv
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api
 ```
 
-[Learn more about nx sync](https://nx.dev/reference/nx-commands#sync)
+The backend is run on port `3001` during local development so that the Next.js application can use port `3000`.
 
-## Set up CI!
+### 4. Start PostgreSQL and pgAdmin
 
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
+```bash
+npm run db:up
 ```
 
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+Available local services:
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+| Service | Address |
+| --- | --- |
+| PostgreSQL | `localhost:5432` |
+| pgAdmin | `http://localhost:8080` |
 
-### Step 2
+The actual ports follow the values configured in `.env`.
 
-Use the following command to configure a CI workflow for your workspace:
+### 5. Generate the Prisma client and apply migrations
 
-```sh
-npx nx g ci-workflow
+```bash
+npm run db:generate
+npm run db:migrate
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+To inspect the database with Prisma Studio:
 
-## Install Nx Console
+```bash
+npm run db:studio
+```
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+### 6. Start the backend API
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+WSL, Linux, or macOS:
 
-## Useful links
+```bash
+PORT=3001 npm run dev:api
+```
 
-Learn more:
+PowerShell:
 
-- [Learn more about this workspace setup](https://nx.dev/nx-api/js?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+```powershell
+$env:PORT=3001
+npm run dev:api
+```
 
-And join the Nx community:
+The API will be available at:
 
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+```text
+http://localhost:3001/api
+```
+
+### 7. Start the frontend
+
+Open another terminal and run:
+
+```bash
+npm run dev:web
+```
+
+The web application will be available at:
+
+```text
+http://localhost:3000
+```
+
+`npm run dev` is an alias for `npm run dev:web`.
+
+## Available scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the Next.js application in development mode |
+| `npm run dev:web` | Start the frontend development server |
+| `npm run dev:api` | Start the NestJS API in development mode |
+| `npm run build` | Build every Nx project that has a build target |
+| `npm run build:web` | Build the Next.js application |
+| `npm run build:api` | Build the NestJS API |
+| `npm run start:web` | Start the production Next.js server after building |
+| `npm run start:api` | Start the API with its production Nx configuration |
+| `npm run lint` | Lint all supported workspace projects |
+| `npm run typecheck` | Type-check all supported workspace projects |
+| `npm run test` | Run all unit tests |
+| `npm run test:web` | Run frontend unit tests |
+| `npm run test:api` | Run backend unit tests |
+| `npm run e2e` | Run Playwright tests for the web application |
+| `npm run format` | Format workspace files with Nx and Prettier |
+| `npm run format:check` | Check formatting without modifying files |
+| `npm run graph` | Open the Nx dependency graph |
+| `npm run db:up` | Start PostgreSQL and pgAdmin containers |
+| `npm run db:down` | Stop and remove the Docker Compose containers |
+| `npm run db:logs` | Follow Docker Compose logs |
+| `npm run db:generate` | Generate the Prisma client |
+| `npm run db:migrate` | Create or apply local Prisma migrations |
+| `npm run db:migrate:deploy` | Apply existing migrations in deployment environments |
+| `npm run db:studio` | Open Prisma Studio |
+
+## Common development workflow
+
+Run these commands before opening a pull request:
+
+```bash
+npm run format:check
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
+
+Use the Nx dependency graph when working across applications and shared libraries:
+
+```bash
+npm run graph
+```
+
+## Project documentation
+
+More detailed project documents are available in `docs/`:
+
+- Software Requirements Specification
+- Software Design Document
+- Entity Relationship Diagram
+- API documentation
+- Use-case specification
+
+Implementation proposals, specifications, and archived changes are stored in `openspec/`.
+
+## License
+
+This project is licensed under the MIT License.
