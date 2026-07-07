@@ -68,3 +68,50 @@ export const canceledOrderFixture = {
   status: 'CANCELED',
   updatedAt: '2026-06-14T08:10:00.000Z',
 };
+
+export const adminOrderSummaryFixture = {
+  id: orderIds.pending,
+  orderNumber: orderSummaryFixture.orderNumber,
+  customer: {
+    id: 'customer-id',
+    email: 'customer@example.com',
+    fullName: 'Nguyen Van A',
+    phone: '+84901234567',
+  },
+  status: 'PENDING',
+  paymentStatus: 'PENDING',
+  totalAmount: 730000,
+  itemCount: 2,
+  createdAt: '2026-06-14T08:00:00.000Z',
+  updatedAt: '2026-06-14T08:00:00.000Z',
+};
+
+export const adminOrderListFixture = {
+  data: [adminOrderSummaryFixture],
+  meta: {
+    page: 1,
+    limit: 10,
+    total: 1,
+    totalPages: 1,
+  },
+};
+
+export const adminOrderDetailFixture = {
+  ...orderDetailFixture,
+  user: adminOrderSummaryFixture.customer,
+  voucher: null,
+  voucherRedemption: null,
+  payments: [
+    {
+      id: '55555555-aaaa-4555-8555-555555555555',
+      provider: 'COD',
+      method: 'COD',
+      status: 'PENDING',
+      amount: 730000,
+      currency: 'VND',
+      createdAt: '2026-06-14T08:00:00.000Z',
+      updatedAt: '2026-06-14T08:00:00.000Z',
+    },
+  ],
+  statusHistories: [],
+};

@@ -14,6 +14,8 @@ import {
 
 const { OrderController } =
   require('../../../../api/src/app/orders/order.controller') as typeof import('../../../../api/src/app/orders/order.controller');
+const { AdminOrderController } =
+  require('../../../../api/src/app/orders/admin-order.controller') as typeof import('../../../../api/src/app/orders/admin-order.controller');
 const { OrderService } =
   require('../../../../api/src/app/orders/order.service') as typeof import('../../../../api/src/app/orders/order.service');
 const { JwtAuthGuard } =
@@ -23,6 +25,9 @@ export type OrderServiceMock = {
   getMyOrderList: MockFunction;
   getMyOrderDetail: MockFunction;
   cancelMyOrder: MockFunction;
+  getAdminOrderList: MockFunction;
+  getAdminOrderDetail: MockFunction;
+  adminUpdateStatus: MockFunction;
 };
 
 export function createOrderServiceMock(): OrderServiceMock {
@@ -30,6 +35,9 @@ export function createOrderServiceMock(): OrderServiceMock {
     getMyOrderList: createMockFunction(),
     getMyOrderDetail: createMockFunction(),
     cancelMyOrder: createMockFunction(),
+    getAdminOrderList: createMockFunction(),
+    getAdminOrderDetail: createMockFunction(),
+    adminUpdateStatus: createMockFunction(),
   };
 }
 
@@ -48,7 +56,7 @@ export function getOrderServiceCallCount(orderService: OrderServiceMock) {
 
 export async function createOrderApiTestApp(orderService: OrderServiceMock) {
   const app = await createApiTestApp({
-    controllers: [OrderController],
+    controllers: [OrderController, AdminOrderController],
     providers: [
       {
         provide: OrderService,
