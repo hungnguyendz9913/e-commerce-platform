@@ -40,6 +40,8 @@ export * from './lib/vouchers/voucher.enums.js';
 // Orders
 export * from './lib/orders/list-orders-query.dto.js';
 export * from './lib/orders/cancel-order.dto.js';
+export * from './lib/orders/admin-update-status.dto.js';
+export * from './lib/orders/order-valid-transition.js';
 
 // Checkout
 export * from './lib/checkout/delivery-info.dto.js';

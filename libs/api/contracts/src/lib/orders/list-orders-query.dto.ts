@@ -37,6 +37,12 @@ export class ListOrdersQueryDto {
   @MaxLength(120)
   q?: string;
 
+  @Transform(({ value }) => normalizeOptionalString(value))
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  search?: string;
+
   @IsOptional()
   @IsEnum(OrderStatus)
   status?: OrderStatus;
@@ -53,7 +59,17 @@ export class ListOrdersQueryDto {
   @Transform(({ value }) => normalizeOptionalString(value))
   @IsOptional()
   @IsDateString()
+  fromDate?: string;
+
+  @Transform(({ value }) => normalizeOptionalString(value))
+  @IsOptional()
+  @IsDateString()
   to?: string;
+
+  @Transform(({ value }) => normalizeOptionalString(value))
+  @IsOptional()
+  @IsDateString()
+  toDate?: string;
 
   @IsOptional()
   @IsEnum(OrderSortField)
