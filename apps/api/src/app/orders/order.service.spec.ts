@@ -30,8 +30,12 @@ function createService() {
   const orderRepository = {
     getMyOrderDetail: jest.fn(),
     listOrders: jest.fn(),
+    listAdminOrders: jest.fn(),
+    getAdminOrderDetail: jest.fn(),
     findOrderByIdWithItems: jest.fn(),
+    getOrderById: jest.fn(),
     updateOrderStatus: jest.fn(),
+    updateOrderStatusWhenCurrentStatusIn: jest.fn(),
   };
   const transactionService = {
     run: jest.fn((callback) => callback(transaction)),
@@ -94,7 +98,9 @@ describe('OrderService', () => {
     const order = createOrder();
     const canceledOrder = { ...order, status: OrderStatus.CANCELED };
     orderRepository.findOrderByIdWithItems.mockResolvedValue(order);
-    orderRepository.updateOrderStatus.mockResolvedValue(canceledOrder);
+    orderRepository.updateOrderStatusWhenCurrentStatusIn.mockResolvedValue(
+      canceledOrder,
+    );
 
     await expect(
       service.cancelMyOrder('customer-id', 'order-id', {
@@ -107,8 +113,11 @@ describe('OrderService', () => {
       'order-id',
       transaction,
     );
-    expect(orderRepository.updateOrderStatus).toHaveBeenCalledWith(
+    expect(
+      orderRepository.updateOrderStatusWhenCurrentStatusIn,
+    ).toHaveBeenCalledWith(
       'order-id',
+      [OrderStatus.PENDING, OrderStatus.PROCESSING],
       OrderStatus.CANCELED,
       transaction,
     );
@@ -156,9 +165,13 @@ describe('OrderService', () => {
       'order-id',
       transaction,
     );
-    expect(orderRepository.updateOrderStatus).not.toHaveBeenCalled();
+    expect(
+      orderRepository.updateOrderStatusWhenCurrentStatusIn,
+    ).not.toHaveBeenCalled();
     expect(orderStatusHistoryRepository.createHistory).not.toHaveBeenCalled();
-    expect(inventoryService.restoreStockForCanceledOrder).not.toHaveBeenCalled();
+    expect(
+      inventoryService.restoreStockForCanceledOrder,
+    ).not.toHaveBeenCalled();
   });
 
   it('should reject non-cancelable orders before side effects', async () => {
@@ -176,8 +189,204 @@ describe('OrderService', () => {
       service.cancelMyOrder('customer-id', 'order-id', {}),
     ).rejects.toThrow(UnprocessableEntityException);
 
-    expect(orderRepository.updateOrderStatus).not.toHaveBeenCalled();
+    expect(
+      orderRepository.updateOrderStatusWhenCurrentStatusIn,
+    ).not.toHaveBeenCalled();
     expect(orderStatusHistoryRepository.createHistory).not.toHaveBeenCalled();
-    expect(inventoryService.restoreStockForCanceledOrder).not.toHaveBeenCalled();
+    expect(
+      inventoryService.restoreStockForCanceledOrder,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('should cancel an order as admin with admin history attribution in the active transaction', async () => {
+    const {
+      service,
+      orderRepository,
+      transactionService,
+      orderStatusHistoryRepository,
+      inventoryService,
+      transaction,
+    } = createService();
+    const order = createOrder({ status: OrderStatus.PROCESSING });
+    const canceledOrder = { ...order, status: OrderStatus.CANCELED };
+    orderRepository.findOrderByIdWithItems.mockResolvedValue(order);
+    orderRepository.updateOrderStatusWhenCurrentStatusIn.mockResolvedValue(
+      canceledOrder,
+    );
+
+    await expect(
+      service.adminUpdateStatus(
+        'order-id',
+        { status: OrderStatus.CANCELED, note: 'Fraud review' },
+        'admin-id',
+      ),
+    ).resolves.toBe(canceledOrder);
+
+    expect(transactionService.run).toHaveBeenCalledTimes(1);
+    expect(orderRepository.findOrderByIdWithItems).toHaveBeenCalledWith(
+      'order-id',
+      transaction,
+    );
+    expect(
+      orderRepository.updateOrderStatusWhenCurrentStatusIn,
+    ).toHaveBeenCalledWith(
+      'order-id',
+      [OrderStatus.PENDING, OrderStatus.PROCESSING],
+      OrderStatus.CANCELED,
+      transaction,
+    );
+    expect(orderStatusHistoryRepository.createHistory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromStatus: OrderStatus.PROCESSING,
+        toStatus: OrderStatus.CANCELED,
+        note: 'Fraud review',
+        changedByUser: {
+          connect: {
+            id: 'admin-id',
+          },
+        },
+      }),
+      transaction,
+    );
+    expect(inventoryService.restoreStockForCanceledOrder).toHaveBeenCalledWith(
+      order,
+      transaction,
+    );
+  });
+
+  it('should return admin order list with customer and item count metadata', async () => {
+    const { service, orderRepository } = createService();
+    orderRepository.listAdminOrders.mockResolvedValue([
+      [
+        {
+          id: 'order-id',
+          orderNumber: 'ORD-1',
+          user: {
+            id: 'customer-id',
+            email: 'customer@example.com',
+            fullName: 'Customer',
+            phone: '0900000000',
+          },
+          status: OrderStatus.PENDING,
+          paymentStatus: 'PENDING',
+          totalAmount: 100,
+          _count: {
+            items: 2,
+          },
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+          updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+      ],
+      1,
+    ]);
+
+    await expect(
+      service.getAdminOrderList({
+        page: 1,
+        limit: 10,
+        search: 'customer@example.com',
+        fromDate: '2026-01-01',
+        toDate: '2026-01-31',
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            id: 'order-id',
+            customer: expect.objectContaining({
+              email: 'customer@example.com',
+            }),
+            itemCount: 2,
+          }),
+        ],
+        meta: expect.objectContaining({
+          page: 1,
+          limit: 10,
+          total: 1,
+          totalPages: 1,
+        }),
+      }),
+    );
+
+    expect(orderRepository.listAdminOrders).toHaveBeenCalledWith(
+      expect.objectContaining({
+        createdAt: expect.objectContaining({
+          gte: new Date('2026-01-01'),
+          lte: new Date('2026-01-31'),
+        }),
+      }),
+      { createdAt: 'desc' },
+      1,
+      10,
+    );
+  });
+
+  it('should return admin order detail when found', async () => {
+    const { service, orderRepository } = createService();
+    const order = createOrder();
+    orderRepository.getAdminOrderDetail.mockResolvedValue(order);
+
+    await expect(service.getAdminOrderDetail('order-id')).resolves.toBe(order);
+    expect(orderRepository.getAdminOrderDetail).toHaveBeenCalledWith(
+      'order-id',
+    );
+  });
+
+  it('should reject missing admin order detail as not found', async () => {
+    const { service, orderRepository } = createService();
+    orderRepository.getAdminOrderDetail.mockResolvedValue(null);
+
+    await expect(service.getAdminOrderDetail('order-id')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('should update admin order status and create history for non-cancel transitions', async () => {
+    const {
+      service,
+      orderRepository,
+      orderStatusHistoryRepository,
+      inventoryService,
+      transaction,
+    } = createService();
+    const order = createOrder({ status: OrderStatus.PENDING });
+    const updatedOrder = { ...order, status: OrderStatus.PROCESSING };
+    orderRepository.findOrderByIdWithItems.mockResolvedValue(order);
+    orderRepository.updateOrderStatusWhenCurrentStatusIn.mockResolvedValue(
+      updatedOrder,
+    );
+
+    await expect(
+      service.adminUpdateStatus(
+        'order-id',
+        { status: OrderStatus.PROCESSING, note: 'Approved' },
+        'admin-id',
+      ),
+    ).resolves.toBe(updatedOrder);
+
+    expect(
+      orderRepository.updateOrderStatusWhenCurrentStatusIn,
+    ).toHaveBeenCalledWith(
+      'order-id',
+      [OrderStatus.PENDING],
+      OrderStatus.PROCESSING,
+      transaction,
+    );
+    expect(orderStatusHistoryRepository.createHistory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fromStatus: OrderStatus.PENDING,
+        toStatus: OrderStatus.PROCESSING,
+        note: 'Approved',
+        changedByUser: {
+          connect: {
+            id: 'admin-id',
+          },
+        },
+      }),
+      transaction,
+    );
+    expect(
+      inventoryService.restoreStockForCanceledOrder,
+    ).not.toHaveBeenCalled();
   });
 });
