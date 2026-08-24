@@ -476,6 +476,38 @@ describe('CheckoutService', () => {
       );
     });
 
+    it('returns a business-rule error when the voucher limit is reached', async () => {
+      const { service, checkoutRepository, voucherService } = createService();
+      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+        createCart(),
+      );
+      checkoutRepository.createOrder.mockResolvedValue({ id: 'order-id' });
+      checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
+      voucherService.validateVoucherForCheckout.mockResolvedValue({
+        voucherId: 'voucher-id',
+        voucherCode: 'SALE10',
+        eligibleAmount: 200000,
+        discount: 20000,
+      });
+      voucherService.isVoucherAvailableForUser.mockResolvedValue(false);
+
+      await expect(
+        service.createOrderFromCart(
+          'user-id',
+          createCheckoutDto(CheckoutPaymentProvider.COD, 'SALE10'),
+        ),
+      ).rejects.toMatchObject({
+        status: 422,
+        response: {
+          code: 'BUSINESS_RULE_VIOLATION',
+          message: 'Voucher usage limit for this user has been reached.',
+        },
+      });
+
+      expect(voucherService.createVoucherRedemption).not.toHaveBeenCalled();
+      expect(checkoutRepository.createPayment).not.toHaveBeenCalled();
+    });
+
     it('propagates voucher redemption failure after claiming the cart', async () => {
       const { service, checkoutRepository, voucherService } = createService();
       const order = {

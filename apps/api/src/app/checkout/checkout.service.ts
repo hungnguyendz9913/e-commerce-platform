@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { TransactionService } from '@e-commerce-platform/database';
 import {
   ApplyVoucherDto,
@@ -120,9 +124,10 @@ export class CheckoutService {
           );
 
         if (!canApplyVoucher) {
-          throw new Error(
-            'Voucher usage limit for this user has been reached.',
-          );
+          throw new UnprocessableEntityException({
+            code: 'BUSINESS_RULE_VIOLATION',
+            message: 'Voucher usage limit for this user has been reached.',
+          });
         }
 
         await this.voucherService.createVoucherRedemption({
