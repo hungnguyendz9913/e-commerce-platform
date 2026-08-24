@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { DbClient } from '@e-commerce-platform/database';
 import { ProductInventoryDto } from '@e-commerce-platform/api-contracts';
 import { InventoryRepository } from './inventory.repository';
@@ -7,6 +13,7 @@ import { InventoryMovementType } from '@e-commerce-platform/types';
 type ProductInventory = {
   stockQuantity: number;
   reservedQuantity: number;
+  version: number;
 } | null;
 
 @Injectable()
@@ -64,15 +71,21 @@ export class InventoryService {
 
     this.assertInventoryValues(next);
 
-    await this.inventoryRepository.upsertInventoryItem(
-      productId,
-      {
+    if (!existingInventory) {
+      await this.inventoryRepository.createInventoryItem(
+        { productId, ...next },
+        client,
+      );
+    } else {
+      const updateResult = await this.inventoryRepository.updateInventoryItem(
         productId,
-        stockQuantity: next.stockQuantity,
-        reservedQuantity: next.reservedQuantity,
-      },
-      client,
-    );
+        existingInventory.version,
+        next,
+        client,
+      );
+
+      this.assertInventoryMutationSucceeded(updateResult.count, productId);
+    }
 
     if (
       inventory.stockQuantity === undefined ||
@@ -107,6 +120,15 @@ export class InventoryService {
     }
   }
 
+  private assertInventoryMutationSucceeded(count: number, productId: string) {
+    if (count === 0) {
+      throw new ConflictException({
+        code: 'INVENTORY_CONCURRENCY_CONFLICT',
+        message: `Inventory for product ${productId} was modified concurrently. Please retry.`,
+      });
+    }
+  }
+
   async deductStockForCheckout(
     productId: string,
     quantity: number,
@@ -136,7 +158,14 @@ export class InventoryService {
     const beforeQuantity = inventoryItem.stockQuantity;
     const afterQuantity = beforeQuantity - quantity;
 
-    await this.inventoryRepository.decreaseStock(productId, quantity, client);
+    const updateResult = await this.inventoryRepository.decreaseStock(
+      productId,
+      quantity,
+      inventoryItem.version,
+      client,
+    );
+
+    this.assertInventoryMutationSucceeded(updateResult.count, productId);
 
     await this.inventoryRepository.createInventoryMovement(
       {
@@ -176,11 +205,14 @@ export class InventoryService {
       const beforeQuantity = inventoryItem.stockQuantity;
       const afterQuantity = beforeQuantity + item.quantity;
 
-      await this.inventoryRepository.increaseStock(
+      const updateResult = await this.inventoryRepository.increaseStock(
         item.productId,
         item.quantity,
+        inventoryItem.version,
         client,
       );
+
+      this.assertInventoryMutationSucceeded(updateResult.count, item.productId);
 
       await this.inventoryRepository.createInventoryMovement(
         {

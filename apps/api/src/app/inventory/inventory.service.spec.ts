@@ -1,4 +1,9 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { DatabaseService } from '@e-commerce-platform/database';
 import { InventoryRepository } from './inventory.repository';
 import { InventoryService } from './inventory.service';
@@ -7,9 +12,8 @@ function createInventoryService() {
   const transaction = {
     inventoryItem: {
       create: jest.fn().mockResolvedValue({ id: 'inventory-id' }),
-      upsert: jest.fn().mockResolvedValue({ id: 'inventory-id' }),
       findUnique: jest.fn(),
-      update: jest.fn(),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     inventoryMovement: {
       create: jest.fn(),
@@ -98,6 +102,7 @@ describe('InventoryService', () => {
       {
         stockQuantity: 5,
         reservedQuantity: 1,
+        version: 3,
       },
       {
         stockQuantity: 8,
@@ -105,16 +110,12 @@ describe('InventoryService', () => {
       transaction as never,
     );
 
-    expect(transaction.inventoryItem.upsert).toHaveBeenCalledWith({
-      where: { productId: 'product-id' },
-      create: {
-        productId: 'product-id',
+    expect(transaction.inventoryItem.updateMany).toHaveBeenCalledWith({
+      where: { productId: 'product-id', version: 3 },
+      data: {
         stockQuantity: 8,
         reservedQuantity: 1,
-      },
-      update: {
-        stockQuantity: 8,
-        reservedQuantity: 1,
+        version: { increment: 1 },
       },
     });
     expect(transaction.inventoryMovement.create).toHaveBeenCalledWith({
@@ -136,6 +137,7 @@ describe('InventoryService', () => {
       {
         stockQuantity: 5,
         reservedQuantity: 1,
+        version: 4,
       },
       {
         reservedQuantity: 2,
@@ -143,16 +145,12 @@ describe('InventoryService', () => {
       transaction as never,
     );
 
-    expect(transaction.inventoryItem.upsert).toHaveBeenCalledWith({
-      where: { productId: 'product-id' },
-      create: {
-        productId: 'product-id',
+    expect(transaction.inventoryItem.updateMany).toHaveBeenCalledWith({
+      where: { productId: 'product-id', version: 4 },
+      data: {
         stockQuantity: 5,
         reservedQuantity: 2,
-      },
-      update: {
-        stockQuantity: 5,
-        reservedQuantity: 2,
+        version: { increment: 1 },
       },
     });
     expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
@@ -166,6 +164,7 @@ describe('InventoryService', () => {
       {
         stockQuantity: 5,
         reservedQuantity: 1,
+        version: 5,
       },
       {
         stockQuantity: 5,
@@ -173,18 +172,114 @@ describe('InventoryService', () => {
       transaction as never,
     );
 
-    expect(transaction.inventoryItem.upsert).toHaveBeenCalledWith({
-      where: { productId: 'product-id' },
-      create: {
-        productId: 'product-id',
+    expect(transaction.inventoryItem.updateMany).toHaveBeenCalledWith({
+      where: { productId: 'product-id', version: 5 },
+      data: {
         stockQuantity: 5,
         reservedQuantity: 1,
-      },
-      update: {
-        stockQuantity: 5,
-        reservedQuantity: 1,
+        version: { increment: 1 },
       },
     });
+    expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
+  });
+
+  it('should reject a stale admin inventory update without recording movement', async () => {
+    const { service, transaction } = createInventoryService();
+    transaction.inventoryItem.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.updateProductInventoryFromAdminProduct(
+        'product-id',
+        { stockQuantity: 5, reservedQuantity: 1, version: 2 },
+        { stockQuantity: 8 },
+        transaction as never,
+      ),
+    ).rejects.toThrow(ConflictException);
+
+    expect(transaction.inventoryItem.updateMany).toHaveBeenCalledWith({
+      where: { productId: 'product-id', version: 2 },
+      data: {
+        stockQuantity: 8,
+        reservedQuantity: 1,
+        version: { increment: 1 },
+      },
+    });
+    expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
+  });
+
+  it('should deduct stock with the version read and record the sale movement', async () => {
+    const { service, transaction } = createInventoryService();
+    transaction.inventoryItem.findUnique.mockResolvedValue({
+      productId: 'product-id',
+      stockQuantity: 5,
+      reservedQuantity: 1,
+      version: 7,
+    });
+
+    await service.deductStockForCheckout(
+      'product-id',
+      2,
+      'order-id',
+      transaction as never,
+    );
+
+    expect(transaction.inventoryItem.updateMany).toHaveBeenCalledWith({
+      where: { productId: 'product-id', version: 7 },
+      data: {
+        stockQuantity: { decrement: 2 },
+        version: { increment: 1 },
+      },
+    });
+    expect(transaction.inventoryMovement.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        movementType: 'SALE',
+        beforeQuantity: 5,
+        afterQuantity: 3,
+      }),
+    });
+  });
+
+  it('should throw on a stale checkout version without recording movement', async () => {
+    const { service, transaction } = createInventoryService();
+    transaction.inventoryItem.findUnique.mockResolvedValue({
+      productId: 'product-id',
+      stockQuantity: 5,
+      reservedQuantity: 1,
+      version: 7,
+    });
+    transaction.inventoryItem.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.deductStockForCheckout(
+        'product-id',
+        2,
+        'order-id',
+        transaction as never,
+      ),
+    ).rejects.toThrow(ConflictException);
+
+    expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
+  });
+
+  it('should preserve the insufficient-stock business rule', async () => {
+    const { service, transaction } = createInventoryService();
+    transaction.inventoryItem.findUnique.mockResolvedValue({
+      productId: 'product-id',
+      stockQuantity: 5,
+      reservedQuantity: 4,
+      version: 7,
+    });
+
+    await expect(
+      service.deductStockForCheckout(
+        'product-id',
+        2,
+        'order-id',
+        transaction as never,
+      ),
+    ).rejects.toThrow(UnprocessableEntityException);
+
+    expect(transaction.inventoryItem.updateMany).not.toHaveBeenCalled();
     expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
   });
 
@@ -193,10 +288,8 @@ describe('InventoryService', () => {
     transaction.inventoryItem.findUnique.mockResolvedValue({
       productId: 'product-id',
       stockQuantity: 3,
-    });
-    transaction.inventoryItem.update.mockResolvedValue({
-      productId: 'product-id',
-      stockQuantity: 5,
+      reservedQuantity: 0,
+      version: 9,
     });
 
     await service.restoreStockForCanceledOrder(
@@ -217,9 +310,10 @@ describe('InventoryService', () => {
         productId: 'product-id',
       },
     });
-    expect(transaction.inventoryItem.update).toHaveBeenCalledWith({
+    expect(transaction.inventoryItem.updateMany).toHaveBeenCalledWith({
       where: {
         productId: 'product-id',
+        version: 9,
       },
       data: {
         stockQuantity: {
@@ -243,6 +337,29 @@ describe('InventoryService', () => {
     });
   });
 
+  it('should throw on stale cancellation state without recording movement', async () => {
+    const { service, transaction } = createInventoryService();
+    transaction.inventoryItem.findUnique.mockResolvedValue({
+      productId: 'product-id',
+      stockQuantity: 3,
+      reservedQuantity: 0,
+      version: 9,
+    });
+    transaction.inventoryItem.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.restoreStockForCanceledOrder(
+        {
+          id: '11111111-1111-4111-8111-111111111111',
+          items: [{ productId: 'product-id', quantity: 2 }],
+        },
+        transaction as never,
+      ),
+    ).rejects.toThrow(ConflictException);
+
+    expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
+  });
+
   it('should reject canceled order stock restoration when inventory item is missing', async () => {
     const { service, transaction } = createInventoryService();
     transaction.inventoryItem.findUnique.mockResolvedValue(null);
@@ -261,7 +378,7 @@ describe('InventoryService', () => {
         transaction as never,
       ),
     ).rejects.toThrow(NotFoundException);
-    expect(transaction.inventoryItem.update).not.toHaveBeenCalled();
+    expect(transaction.inventoryItem.updateMany).not.toHaveBeenCalled();
     expect(transaction.inventoryMovement.create).not.toHaveBeenCalled();
   });
 });

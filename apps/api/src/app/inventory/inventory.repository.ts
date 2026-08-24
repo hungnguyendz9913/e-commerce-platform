@@ -1,4 +1,8 @@
-import { DatabaseService, DbClient, Prisma } from '@e-commerce-platform/database';
+import {
+  DatabaseService,
+  DbClient,
+  Prisma,
+} from '@e-commerce-platform/database';
 import { InventoryMovementType } from '@e-commerce-platform/types';
 import { Injectable } from '@nestjs/common';
 
@@ -13,17 +17,21 @@ export class InventoryRepository {
     return client.inventoryItem.create({ data });
   }
 
-  upsertInventoryItem(
+  updateInventoryItem(
     productId: string,
-    data: Prisma.InventoryItemUncheckedCreateInput,
+    expectedVersion: number,
+    data: Pick<
+      Prisma.InventoryItemUncheckedUpdateManyInput,
+      'stockQuantity' | 'reservedQuantity'
+    >,
     client: DbClient = this.databaseService,
   ) {
-    return client.inventoryItem.upsert({
-      where: { productId },
-      create: data,
-      update: {
+    return client.inventoryItem.updateMany({
+      where: { productId, version: expectedVersion },
+      data: {
         stockQuantity: data.stockQuantity,
         reservedQuantity: data.reservedQuantity,
+        version: { increment: 1 },
       },
     });
   }
@@ -43,10 +51,16 @@ export class InventoryRepository {
     });
   }
 
-  async increaseStock(productId: string, quantity: number, client: DbClient) {
-    return client.inventoryItem.update({
+  async increaseStock(
+    productId: string,
+    quantity: number,
+    expectedVersion: number,
+    client: DbClient,
+  ) {
+    return client.inventoryItem.updateMany({
       where: {
         productId,
+        version: expectedVersion,
       },
       data: {
         stockQuantity: {
@@ -59,9 +73,14 @@ export class InventoryRepository {
     });
   }
 
-  async decreaseStock(productId: string, quantity: number, client: DbClient) {
-    return client.inventoryItem.update({
-      where: { productId },
+  async decreaseStock(
+    productId: string,
+    quantity: number,
+    expectedVersion: number,
+    client: DbClient,
+  ) {
+    return client.inventoryItem.updateMany({
+      where: { productId, version: expectedVersion },
       data: {
         stockQuantity: { decrement: quantity },
         version: { increment: 1 },
