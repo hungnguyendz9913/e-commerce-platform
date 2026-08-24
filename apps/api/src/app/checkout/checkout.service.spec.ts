@@ -75,7 +75,7 @@ function createService() {
     createPayment: jest.fn(),
   };
   const transactionService = {
-    run: jest.fn((cb) => cb(tx)),
+    runSerializable: jest.fn((cb) => cb(tx)),
   };
   const inventoryService = {
     deductStockForCheckout: jest.fn(),
@@ -235,8 +235,13 @@ describe('CheckoutService', () => {
 
   describe('createOrderFromCart', () => {
     it('creates order and returns it for COD', async () => {
-      const { service, checkoutRepository, inventoryService, tx } =
-        createService();
+      const {
+        service,
+        checkoutRepository,
+        transactionService,
+        inventoryService,
+        tx,
+      } = createService();
       const order = {
         id: 'order-id',
         orderNumber: 'ORD-123',
@@ -254,6 +259,9 @@ describe('CheckoutService', () => {
       );
 
       expect(result).toEqual({ order });
+      expect(transactionService.runSerializable).toHaveBeenCalledWith(
+        expect.any(Function),
+      );
       expect(checkoutRepository.createOrder).toHaveBeenCalledWith(
         expect.objectContaining({
           recipientName: 'John Doe',

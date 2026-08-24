@@ -56,7 +56,7 @@ export class CheckoutService {
   }
 
   async createOrderFromCart(userId: string, dto: CheckoutDto) {
-    return this.transactionService.run(async (tx) => {
+    return this.transactionService.runSerializable(async (tx) => {
       const cart = await this.checkoutRepository.findActiveCartWithItems(
         userId,
         tx,
