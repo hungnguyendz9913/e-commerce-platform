@@ -1,11 +1,22 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { CartRepository } from './cart.repository';
-import { AddItemToCartDto, UpdateCartItemQuantityDto } from '@e-commerce-platform/api-contracts';
+import {
+  AddItemToCartDto,
+  UpdateCartItemQuantityDto,
+} from '@e-commerce-platform/api-contracts';
 import { ProductsService } from '../products/products.service';
+import { prismaError, PrismaErrorCode } from '@e-commerce-platform/utils';
 
 @Injectable()
 export class CartService {
-  constructor (private readonly cartRepository: CartRepository, private readonly productService: ProductsService) {}
+  constructor(
+    private readonly cartRepository: CartRepository,
+    private readonly productService: ProductsService,
+  ) {}
 
   async getMyActiveCart(userId: string) {
     return this.cartRepository.getMyActiveCart(userId);
@@ -13,13 +24,11 @@ export class CartService {
 
   async addItemToCart(userId: string, addItemToCartDto: AddItemToCartDto) {
     const quantity: number = addItemToCartDto.quantity ?? 1;
-    let myCart = await this.cartRepository.getMyActiveCart(userId);
-    
-    if (!myCart) {
-      myCart = await this.cartRepository.createNewCartForUser(userId);
-    }
+    const myCart = await this.getOrCreateActiveCart(userId);
 
-    const product = await this.productService.findProductForCart(addItemToCartDto.productId);
+    const product = await this.productService.findProductForCart(
+      addItemToCartDto.productId,
+    );
     if (!product) {
       throw new NotFoundException('Product not found!');
     }
@@ -36,20 +45,18 @@ export class CartService {
       throw new UnprocessableEntityException('Product is out of stock!');
     }
 
-    const existingCartItem = await this.cartRepository.findItemByCardIdAndProductId(myCart.id, product.id);
+    const existingCartItem =
+      await this.cartRepository.findItemByCardIdAndProductId(
+        myCart.id,
+        product.id,
+      );
     if (existingCartItem) {
-      const newQuantity = existingCartItem.quantity + quantity;
-
-      if (newQuantity > availableQuantity) {
-        throw new UnprocessableEntityException(
-          'Requested quantity exceeds available stock!',
-        );
-      }
-
-      return this.cartRepository.updateCartItemQuantity(
+      return this.incrementCartItem(
         existingCartItem.id,
-        newQuantity,
-        product.price
+        myCart.id,
+        quantity,
+        availableQuantity,
+        product.price,
       );
     }
 
@@ -59,27 +66,58 @@ export class CartService {
       );
     }
 
-    return this.cartRepository.createCartItem({
-      cartId: myCart.id,
-      productId: product.id,
-      quantity,
-      unitPriceSnapshot: product.price,
-    });
+    try {
+      return await this.cartRepository.createCartItem({
+        cartId: myCart.id,
+        productId: product.id,
+        quantity,
+        unitPriceSnapshot: product.price,
+      });
+    } catch (error) {
+      if (!prismaError(error, PrismaErrorCode.UniqueConstraint)) {
+        throw error;
+      }
+
+      const concurrentCartItem =
+        await this.cartRepository.findItemByCardIdAndProductId(
+          myCart.id,
+          product.id,
+        );
+
+      if (!concurrentCartItem) {
+        throw error;
+      }
+
+      return this.incrementCartItem(
+        concurrentCartItem.id,
+        myCart.id,
+        quantity,
+        availableQuantity,
+        product.price,
+      );
+    }
   }
 
-  async updateCartItemQuantity(userId: string, itemId: string, updateCartItemQuantityDto: UpdateCartItemQuantityDto) {
+  async updateCartItemQuantity(
+    userId: string,
+    itemId: string,
+    updateCartItemQuantityDto: UpdateCartItemQuantityDto,
+  ) {
     const myCart = await this.cartRepository.getMyActiveCart(userId);
-    
+
     if (!myCart) {
       throw new NotFoundException('Active cart not found');
     }
 
-    const existingCartItem = await this.cartRepository.findCartItemByIdAndCartId(itemId, myCart.id);
+    const existingCartItem =
+      await this.cartRepository.findCartItemByIdAndCartId(itemId, myCart.id);
     if (!existingCartItem) {
       throw new NotFoundException('Cart Item not found');
     }
 
-    const product = await this.productService.findProductForCart(existingCartItem.productId);
+    const product = await this.productService.findProductForCart(
+      existingCartItem.productId,
+    );
     if (!product) {
       throw new NotFoundException('Product not found!');
     }
@@ -102,11 +140,11 @@ export class CartService {
       );
     }
 
-      return this.cartRepository.updateCartItemQuantity(
-        existingCartItem.id,
-        updateCartItemQuantityDto.quantity,
-        product.price
-      );
+    return this.cartRepository.updateCartItemQuantity(
+      existingCartItem.id,
+      updateCartItemQuantityDto.quantity,
+      product.price,
+    );
   }
 
   async removeCartItem(userId: string, itemId: string) {
@@ -142,5 +180,54 @@ export class CartService {
     return {
       success: true,
     };
+  }
+
+  private async getOrCreateActiveCart(userId: string) {
+    const activeCart = await this.cartRepository.getMyActiveCart(userId);
+
+    if (activeCart) {
+      return activeCart;
+    }
+
+    try {
+      return await this.cartRepository.createNewCartForUser(userId);
+    } catch (error) {
+      if (!prismaError(error, PrismaErrorCode.UniqueConstraint)) {
+        throw error;
+      }
+
+      const concurrentCart = await this.cartRepository.getMyActiveCart(userId);
+
+      if (!concurrentCart) {
+        throw error;
+      }
+
+      return concurrentCart;
+    }
+  }
+
+  private async incrementCartItem(
+    cartItemId: string,
+    cartId: string,
+    quantity: number,
+    availableQuantity: number,
+    unitPriceSnapshot: Parameters<
+      CartRepository['incrementCartItemQuantity']
+    >[3],
+  ) {
+    const result = await this.cartRepository.incrementCartItemQuantity(
+      cartItemId,
+      quantity,
+      availableQuantity,
+      unitPriceSnapshot,
+    );
+
+    if (result.count !== 1) {
+      throw new UnprocessableEntityException(
+        'Requested quantity exceeds available stock!',
+      );
+    }
+
+    return this.cartRepository.findCartItemByIdAndCartId(cartItemId, cartId);
   }
 }

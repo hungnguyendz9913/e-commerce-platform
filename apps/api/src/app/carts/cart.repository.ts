@@ -1,5 +1,5 @@
-import { DatabaseService, Prisma } from "@e-commerce-platform/database";
-import { Injectable } from "@nestjs/common";
+import { DatabaseService, Prisma } from '@e-commerce-platform/database';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class CartRepository {
@@ -9,12 +9,12 @@ export class CartRepository {
     return this.databaseService.cart.findFirst({
       where: {
         userId,
-        status: 'ACTIVE'
+        status: 'ACTIVE',
       },
       select: {
         id: true,
         items: true,
-      }
+      },
     });
   }
 
@@ -25,8 +25,8 @@ export class CartRepository {
       },
       select: {
         id: true,
-        items: true
-      }
+        items: true,
+      },
     });
   }
 
@@ -34,8 +34,8 @@ export class CartRepository {
     return this.databaseService.cartItem.findFirst({
       where: {
         cartId,
-        productId
-      }
+        productId,
+      },
     });
   }
 
@@ -50,7 +50,29 @@ export class CartRepository {
     });
   }
 
-  async updateCartItemQuantity(cartItemId: string, quantity: number, unitPriceSnapshot: Prisma.Decimal) {
+  async incrementCartItemQuantity(
+    cartItemId: string,
+    quantity: number,
+    maximumQuantity: number,
+    unitPriceSnapshot: Prisma.Decimal,
+  ) {
+    return this.databaseService.cartItem.updateMany({
+      where: {
+        id: cartItemId,
+        quantity: { lte: maximumQuantity - quantity },
+      },
+      data: {
+        quantity: { increment: quantity },
+        unitPriceSnapshot,
+      },
+    });
+  }
+
+  async updateCartItemQuantity(
+    cartItemId: string,
+    quantity: number,
+    unitPriceSnapshot: Prisma.Decimal,
+  ) {
     return this.databaseService.cartItem.update({
       where: {
         id: cartItemId,
@@ -66,8 +88,8 @@ export class CartRepository {
     return this.databaseService.cartItem.findFirst({
       where: {
         id: itemId,
-        cartId
-      }
+        cartId,
+      },
     });
   }
 
