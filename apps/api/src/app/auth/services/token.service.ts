@@ -23,6 +23,18 @@ function base64UrlEncode(value: Buffer | string) {
 
 @Injectable()
 export class TokenService {
+  private readonly secret: string;
+
+  constructor() {
+    const secret = process.env.JWT_SECRET?.trim();
+
+    if (!secret) {
+      throw new Error('JWT_SECRET environment variable is required.');
+    }
+
+    this.secret = secret;
+  }
+
   createAccessToken(payload: AccessTokenPayload) {
     const now = Math.floor(Date.now() / 1000);
     const tokenPayload = {
@@ -147,9 +159,5 @@ export class TokenService {
       signatureBuffer.length === expectedSignatureBuffer.length &&
       timingSafeEqual(signatureBuffer, expectedSignatureBuffer)
     );
-  }
-
-  private get secret() {
-    return process.env.JWT_SECRET ?? 'development-secret-change-me';
   }
 }
