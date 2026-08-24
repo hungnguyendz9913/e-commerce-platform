@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { TransactionService } from '@e-commerce-platform/database';
 import {
   ApplyVoucherDto,
@@ -64,6 +64,18 @@ export class CheckoutService {
       this.checkoutCartValidator.assertCartNotEmpty(cart);
       this.checkoutCartValidator.assertCartItemsValid(cart.items);
 
+      const claimResult = await this.checkoutRepository.claimCartForCheckout(
+        cart.id,
+        tx,
+      );
+
+      if (claimResult.count !== 1) {
+        throw new ConflictException({
+          code: 'CART_CHECKOUT_CONFLICT',
+          message: 'Cart is already being checked out.',
+        });
+      }
+
       const summary = await this.checkoutTotalsService.buildCheckoutSummary(
         userId,
         cart.items,
@@ -100,16 +112,19 @@ export class CheckoutService {
       }
 
       if (summary.voucher) {
-        const canApplyVoucher = await this.voucherService.isVoucherAvailableForUser(
-          summary.voucher.voucherId,
-          userId,
-          tx,
-        );
+        const canApplyVoucher =
+          await this.voucherService.isVoucherAvailableForUser(
+            summary.voucher.voucherId,
+            userId,
+            tx,
+          );
 
         if (!canApplyVoucher) {
-          throw new Error('Voucher usage limit for this user has been reached.');
+          throw new Error(
+            'Voucher usage limit for this user has been reached.',
+          );
         }
-        
+
         await this.voucherService.createVoucherRedemption({
           userId,
           orderId: order.id,
@@ -128,8 +143,6 @@ export class CheckoutService {
       const payment = paymentData
         ? await this.checkoutRepository.createPayment(paymentData, tx)
         : undefined;
-
-      await this.checkoutRepository.markCartCheckedOut(cart.id, tx);
 
       if (!payment) {
         return { order };

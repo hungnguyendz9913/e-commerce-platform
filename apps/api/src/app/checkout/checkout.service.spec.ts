@@ -1,4 +1,7 @@
-import { UnprocessableEntityException } from '@nestjs/common';
+import {
+  ConflictException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { TransactionService } from '@e-commerce-platform/database';
 import { CheckoutPaymentProvider } from '@e-commerce-platform/api-contracts';
 import { InventoryService } from '../inventory/inventory.service';
@@ -68,7 +71,7 @@ function createService() {
     findActiveCartWithItems: jest.fn(),
     createOrder: jest.fn(),
     createOrderItems: jest.fn(),
-    markCartCheckedOut: jest.fn(),
+    claimCartForCheckout: jest.fn().mockResolvedValue({ count: 1 }),
     createPayment: jest.fn(),
   };
   const transactionService = {
@@ -245,8 +248,6 @@ describe('CheckoutService', () => {
       );
       checkoutRepository.createOrder.mockResolvedValue(order);
       checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
-      checkoutRepository.markCartCheckedOut.mockResolvedValue({});
-
       const result = await service.createOrderFromCart(
         'user-id',
         createCheckoutDto(),
@@ -278,7 +279,7 @@ describe('CheckoutService', () => {
         'order-id',
         tx,
       );
-      expect(checkoutRepository.markCartCheckedOut).toHaveBeenCalledWith(
+      expect(checkoutRepository.claimCartForCheckout).toHaveBeenCalledWith(
         'cart-id',
         tx,
       );
@@ -303,7 +304,6 @@ describe('CheckoutService', () => {
         );
         checkoutRepository.createOrder.mockResolvedValue(order);
         checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
-        checkoutRepository.markCartCheckedOut.mockResolvedValue({});
         checkoutRepository.createPayment.mockResolvedValue(payment);
 
         const result = await service.createOrderFromCart(
@@ -345,7 +345,6 @@ describe('CheckoutService', () => {
       );
       checkoutRepository.createOrder.mockResolvedValue(order);
       checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
-      checkoutRepository.markCartCheckedOut.mockResolvedValue({});
       voucherService.validateVoucherForCheckout.mockResolvedValue({
         voucherId: 'voucher-id',
         voucherCode: 'SALE10',
@@ -378,7 +377,7 @@ describe('CheckoutService', () => {
       });
     });
 
-    it('propagates stock deduction failure and does not mark cart checked out', async () => {
+    it('propagates stock deduction failure after claiming the cart', async () => {
       const { service, checkoutRepository, inventoryService } = createService();
       const order = {
         id: 'order-id',
@@ -401,10 +400,13 @@ describe('CheckoutService', () => {
       await expect(
         service.createOrderFromCart('user-id', createCheckoutDto()),
       ).rejects.toThrow(UnprocessableEntityException);
-      expect(checkoutRepository.markCartCheckedOut).not.toHaveBeenCalled();
+      expect(checkoutRepository.claimCartForCheckout).toHaveBeenCalledWith(
+        'cart-id',
+        expect.anything(),
+      );
     });
 
-    it('does not mark cart checked out when voucher redemption fails', async () => {
+    it('propagates voucher redemption failure after claiming the cart', async () => {
       const { service, checkoutRepository, voucherService } = createService();
       const order = {
         id: 'order-id',
@@ -433,7 +435,31 @@ describe('CheckoutService', () => {
           createCheckoutDto(CheckoutPaymentProvider.COD, 'SALE10'),
         ),
       ).rejects.toThrow('redemption failed');
-      expect(checkoutRepository.markCartCheckedOut).not.toHaveBeenCalled();
+      expect(checkoutRepository.claimCartForCheckout).toHaveBeenCalledWith(
+        'cart-id',
+        expect.anything(),
+      );
+    });
+
+    it('rejects checkout when another request already claimed the cart', async () => {
+      const { service, checkoutRepository, inventoryService, tx } =
+        createService();
+      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+        createCart(),
+      );
+      checkoutRepository.claimCartForCheckout.mockResolvedValue({ count: 0 });
+
+      await expect(
+        service.createOrderFromCart('user-id', createCheckoutDto()),
+      ).rejects.toThrow(ConflictException);
+
+      expect(checkoutRepository.claimCartForCheckout).toHaveBeenCalledWith(
+        'cart-id',
+        tx,
+      );
+      expect(checkoutRepository.createOrder).not.toHaveBeenCalled();
+      expect(checkoutRepository.createOrderItems).not.toHaveBeenCalled();
+      expect(inventoryService.deductStockForCheckout).not.toHaveBeenCalled();
     });
   });
 });

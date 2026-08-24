@@ -47,9 +47,15 @@ export class CheckoutRepository {
     return client.orderItem.createMany({ data: items });
   }
 
-  markCartCheckedOut(cartId: string, client: DbClient = this.databaseService) {
-    return client.cart.update({
-      where: { id: cartId },
+  claimCartForCheckout(
+    cartId: string,
+    client: DbClient = this.databaseService,
+  ) {
+    return client.cart.updateMany({
+      where: {
+        id: cartId,
+        status: 'ACTIVE',
+      },
       data: { status: 'CHECKED_OUT' },
     });
   }
