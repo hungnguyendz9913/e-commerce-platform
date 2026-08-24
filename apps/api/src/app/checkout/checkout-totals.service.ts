@@ -32,8 +32,8 @@ export class CheckoutTotalsService {
         productName: item.product.name,
         sku: item.product.sku,
         quantity: item.quantity,
-        unitPrice: Number(item.unitPriceSnapshot),
-        totalPrice: Number(item.unitPriceSnapshot) * item.quantity,
+        unitPrice: Number(item.product.price),
+        totalPrice: Number(item.product.price) * item.quantity,
       })),
       subtotal,
       discount,
@@ -45,7 +45,7 @@ export class CheckoutTotalsService {
 
   private calcSubtotal(items: CartItem[]): number {
     return items.reduce(
-      (sum, item) => sum + Number(item.unitPriceSnapshot) * item.quantity,
+      (sum, item) => sum + Number(item.product.price) * item.quantity,
       0,
     );
   }
@@ -55,7 +55,7 @@ export class CheckoutTotalsService {
       productId: item.productId,
       categoryId: item.product.categoryId,
       quantity: item.quantity,
-      unitPrice: Number(item.unitPriceSnapshot),
+      unitPrice: Number(item.product.price),
     }));
   }
 }

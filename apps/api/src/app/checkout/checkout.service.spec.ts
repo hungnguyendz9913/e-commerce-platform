@@ -385,6 +385,68 @@ describe('CheckoutService', () => {
       });
     });
 
+    it('uses the current product price for totals, vouchers, and order item snapshots', async () => {
+      const { service, checkoutRepository, voucherService, tx } =
+        createService();
+      const order = {
+        id: 'order-id',
+        orderNumber: 'ORD-123',
+        totalAmount: 246000,
+      };
+      checkoutRepository.findActiveCartWithItems.mockResolvedValue(
+        createCart({
+          items: [
+            createCartItem({
+              unitPriceSnapshot: 100000,
+              product: createProduct({ price: 120000 }),
+            }),
+          ],
+        }),
+      );
+      checkoutRepository.createOrder.mockResolvedValue(order);
+      checkoutRepository.createOrderItems.mockResolvedValue({ count: 1 });
+      voucherService.validateVoucherForCheckout.mockResolvedValue({
+        voucherId: 'voucher-id',
+        voucherCode: 'SALE10',
+        eligibleAmount: 240000,
+        discount: 24000,
+      });
+
+      await service.createOrderFromCart(
+        'user-id',
+        createCheckoutDto(CheckoutPaymentProvider.COD, 'SALE10'),
+      );
+
+      expect(voucherService.validateVoucherForCheckout).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subtotal: 240000,
+          cartItems: [
+            expect.objectContaining({
+              unitPrice: 120000,
+              quantity: 2,
+            }),
+          ],
+        }),
+      );
+      expect(checkoutRepository.createOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subtotalAmount: 240000,
+          discountAmount: 24000,
+          totalAmount: 246000,
+        }),
+        tx,
+      );
+      expect(checkoutRepository.createOrderItems).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            unitPriceSnapshot: 120000,
+            totalPrice: 240000,
+          }),
+        ],
+        tx,
+      );
+    });
+
     it('propagates stock deduction failure after claiming the cart', async () => {
       const { service, checkoutRepository, inventoryService } = createService();
       const order = {

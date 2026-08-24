@@ -36,9 +36,9 @@ export class CheckoutOrderFactory {
       productId: item.productId,
       productNameSnapshot: item.product.name,
       skuSnapshot: item.product.sku,
-      unitPriceSnapshot: item.unitPriceSnapshot,
+      unitPriceSnapshot: item.product.price,
       quantity: item.quantity,
-      totalPrice: Number(item.unitPriceSnapshot) * item.quantity,
+      totalPrice: Number(item.product.price) * item.quantity,
     }));
   }
 }
