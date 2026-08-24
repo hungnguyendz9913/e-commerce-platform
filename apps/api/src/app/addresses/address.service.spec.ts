@@ -11,6 +11,7 @@ describe('AddressService', () => {
     deleteMyAddress: jest.Mock;
     findFirstAddressByUserId: jest.Mock;
     setDefaultAddress: jest.Mock;
+    resetDefaultAddress: jest.Mock;
   };
   let transaction: { id: string };
 
@@ -22,6 +23,7 @@ describe('AddressService', () => {
       deleteMyAddress: jest.fn(),
       findFirstAddressByUserId: jest.fn(),
       setDefaultAddress: jest.fn(),
+      resetDefaultAddress: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -34,7 +36,7 @@ describe('AddressService', () => {
         {
           provide: TransactionService,
           useValue: {
-            run: jest.fn((callback) => callback(transaction)),
+            runSerializable: jest.fn((callback) => callback(transaction)),
           },
         },
       ],
@@ -81,7 +83,9 @@ describe('AddressService', () => {
     addressRepository.getAddressById.mockResolvedValue(address);
     addressRepository.deleteMyAddress.mockResolvedValue(address);
 
-    await expect(service.deleteMyAddress('user-id', 'address-id')).resolves.toBe(address);
+    await expect(
+      service.deleteMyAddress('user-id', 'address-id'),
+    ).resolves.toBe(address);
 
     expect(addressRepository.deleteMyAddress).toHaveBeenCalledWith(
       'user-id',
@@ -90,6 +94,31 @@ describe('AddressService', () => {
     );
     expect(addressRepository.findFirstAddressByUserId).not.toHaveBeenCalled();
     expect(addressRepository.setDefaultAddress).not.toHaveBeenCalled();
+  });
+
+  it('should reset and set the default address in one serializable transaction', async () => {
+    const address = {
+      id: 'address-id',
+      userId: 'user-id',
+      isDefault: false,
+    };
+    addressRepository.getAddressById.mockResolvedValue(address);
+    addressRepository.setDefaultAddress.mockResolvedValue({
+      ...address,
+      isDefault: true,
+    });
+
+    await service.setDefaultAddress('user-id', 'address-id');
+
+    expect(addressRepository.resetDefaultAddress).toHaveBeenCalledWith(
+      'user-id',
+      transaction,
+    );
+    expect(addressRepository.setDefaultAddress).toHaveBeenCalledWith(
+      'user-id',
+      'address-id',
+      transaction,
+    );
   });
 
   it('should assign another address as default when deleting the current default address', async () => {
@@ -105,9 +134,13 @@ describe('AddressService', () => {
     };
     addressRepository.getAddressById.mockResolvedValue(deletedAddress);
     addressRepository.deleteMyAddress.mockResolvedValue(deletedAddress);
-    addressRepository.findFirstAddressByUserId.mockResolvedValue(nextDefaultAddress);
+    addressRepository.findFirstAddressByUserId.mockResolvedValue(
+      nextDefaultAddress,
+    );
 
-    await expect(service.deleteMyAddress('user-id', 'default-address-id')).resolves.toBe(deletedAddress);
+    await expect(
+      service.deleteMyAddress('user-id', 'default-address-id'),
+    ).resolves.toBe(deletedAddress);
 
     expect(addressRepository.deleteMyAddress).toHaveBeenCalledWith(
       'user-id',
@@ -135,7 +168,9 @@ describe('AddressService', () => {
     addressRepository.deleteMyAddress.mockResolvedValue(deletedAddress);
     addressRepository.findFirstAddressByUserId.mockResolvedValue(null);
 
-    await expect(service.deleteMyAddress('user-id', 'default-address-id')).resolves.toBe(deletedAddress);
+    await expect(
+      service.deleteMyAddress('user-id', 'default-address-id'),
+    ).resolves.toBe(deletedAddress);
 
     expect(addressRepository.findFirstAddressByUserId).toHaveBeenCalledWith(
       'user-id',
