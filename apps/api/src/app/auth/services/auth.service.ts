@@ -15,6 +15,7 @@ import { SessionRepository } from '../session.repository';
 import { UserService } from '../../users/user.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
+import { PasswordResetDeliveryService } from './password-reset-delivery.service';
 import {
   REFRESH_TOKEN_TTL_DAYS,
   PASSWORD_RESET_MESSAGE,
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService,
     private readonly sessionRepository: SessionRepository,
+    private readonly passwordResetDeliveryService: PasswordResetDeliveryService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -193,11 +195,16 @@ export class AuthService {
     const user = await this.userService.findPasswordResetUserByEmail(email);
 
     if (user?.status === 'ACTIVE') {
-      this.tokenService.createPasswordResetToken({
+      const token = this.tokenService.createPasswordResetToken({
         sub: user.id,
         email: user.email,
         passwordVersion: this.passwordService.hashToken(user.passwordHash),
       });
+
+      await this.passwordResetDeliveryService.sendPasswordReset(
+        user.email,
+        token,
+      );
     }
 
     return {

@@ -10,6 +10,7 @@ import { AuthService } from './auth.service';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
 import { UserService } from '../../users/user.service';
+import { PasswordResetDeliveryService } from './password-reset-delivery.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -42,6 +43,9 @@ describe('AuthService', () => {
     revokeSession: jest.fn(),
     revokeSessionsForUser: jest.fn(),
   };
+  const passwordResetDeliveryService = {
+    sendPasswordReset: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -70,6 +74,10 @@ describe('AuthService', () => {
         {
           provide: SessionRepository,
           useValue: sessionRepository,
+        },
+        {
+          provide: PasswordResetDeliveryService,
+          useValue: passwordResetDeliveryService,
         },
       ],
     }).compile();
@@ -419,6 +427,10 @@ describe('AuthService', () => {
       email: 'customer@example.com',
       passwordVersion: 'password-version',
     });
+    expect(passwordResetDeliveryService.sendPasswordReset).toHaveBeenCalledWith(
+      'customer@example.com',
+      'reset-token',
+    );
   });
 
   it('should return a generic forgot-password response for an unknown email', async () => {
@@ -433,6 +445,9 @@ describe('AuthService', () => {
       },
     });
     expect(tokenService.createPasswordResetToken).not.toHaveBeenCalled();
+    expect(
+      passwordResetDeliveryService.sendPasswordReset,
+    ).not.toHaveBeenCalled();
   });
 
   it('should return the generic forgot-password response for an inactive account', async () => {
@@ -452,6 +467,9 @@ describe('AuthService', () => {
       },
     });
     expect(tokenService.createPasswordResetToken).not.toHaveBeenCalled();
+    expect(
+      passwordResetDeliveryService.sendPasswordReset,
+    ).not.toHaveBeenCalled();
   });
 
   it('should reset password with a valid token', async () => {
